@@ -1,16 +1,16 @@
 open data
 
-type role
-type player_name
-type chat_message
-type announcement
+type player_name : string
+type chat_message : string
+type announcement : string
+type roles = Innocent | Mafia | Dead
+type game_stage = Night | Discussion | Voting | Game_over
 
 (** [state] is the game state of the mafia_of_ocaml game *)
 type state = {
 	day_count : int;
-	game_stage = Night | Discussion | Voting | Game_over;
+	stage : game_stage;
 	players : player_name * role;
-	roles = Innocent | Mafia | Dead ;
 	chat_history : (timestamp * chat_message) list ;
 	announcement_history : (timestamp * announcement) list
 }
