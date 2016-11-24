@@ -11,7 +11,7 @@ val update_game_state : game_state -> unit
 
 (**
  * Updates the announcements displayed, replaying the old announcements with
- * the given string.
+ * the given list of strings.
  *)
-val update_announcements : string -> unit
+val update_announcements : string list -> unit
 
