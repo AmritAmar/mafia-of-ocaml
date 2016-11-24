@@ -1,4 +1,4 @@
-open Yojson.Basic.Util
+open Yojson
 
 type server_json = {
   day_count: int;
@@ -35,4 +35,8 @@ let encode_cjson cj =
   ]
   |> to_string
 
+let decode_sjson s =
+  failwith "Unimplemented"
 
+let decode_cjson s =
+  failwith "Unimplemented"
