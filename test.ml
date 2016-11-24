@@ -19,6 +19,26 @@ let data_tests = [
                     player_action="CHAT";
                     arguments=["Rachel: dank may-mays";"Tyler: delet this"] })
     );
+  "decode_sjson" >:: (fun _ -> assert_equal
+    { day_count=15;
+      game_stage="VOTING";
+      active_players=["Michael";"Irene"];
+      new_announcements=["Fresh dank memes are available. Get them while they're hot!"];
+      new_messages=["Irene: lel"] }
+    (decode_sjson
+      ("{\"day_count\":15,\"game_stage\":\"VOTING\",\"active_players\":"
+      ^ "[\"Michael\",\"Irene\"],\"new_announcements\":[\"Fresh dank memes "
+      ^ "are available. Get them while they're hot!\"],\"new_messages\":"
+      ^ "[\"Irene: lel\"]}"))
+    );
+  "decode_cjson" >:: (fun _ -> assert_equal
+    { player_id=420;
+      player_action="COMMAND";
+      arguments=["KILL";"CamelMan"] }
+    (decode_cjson
+      ("{\"player_id\":420,\"player_action\":\"COMMAND\",\"arguments\":"
+      ^ "[\"KILL\",\"CamelMan\"]}"))
+    );
 ]
 
 let other_tests = []

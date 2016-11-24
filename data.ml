@@ -1,4 +1,4 @@
-open Yojson
+open Yojson.Basic.Util
 
 type server_json = {
   day_count: int;
@@ -15,28 +15,43 @@ type client_json = {
 }
 
 (* Turn list of strings into list of json strings *)
-let convert_list = List.map (fun s -> `String s)
+let to_json_list = List.map (fun s -> `String s)
+
+(* Turn list of json strings into list of strings *)
+let to_str_list x = x |> to_list |> List.map to_string
 
 let encode_sjson sj =
   `Assoc [
     ("day_count",         `Int sj.day_count                         );
     ("game_stage",        `String sj.game_stage                     );
-    ("active_players",    `List (convert_list sj.active_players)    );
-    ("new_announcements", `List (convert_list sj.new_announcements) );
-    ("new_messages",      `List (convert_list sj.new_messages)      );
+    ("active_players",    `List (to_json_list sj.active_players)    );
+    ("new_announcements", `List (to_json_list sj.new_announcements) );
+    ("new_messages",      `List (to_json_list sj.new_messages)      );
   ]
-  |> to_string
+  |> Yojson.to_string
 
 let encode_cjson cj =
   `Assoc [
     ("player_id",         `Int cj.player_id                 );
     ("player_action",     `String cj.player_action          );
-    ("arguments",         `List (convert_list cj.arguments) );
+    ("arguments",         `List (to_json_list cj.arguments) );
   ]
-  |> to_string
+  |> Yojson.to_string
 
 let decode_sjson s =
-  failwith "Unimplemented"
+  let j = Yojson.Basic.from_string s in
+  {
+    day_count = member "day_count" j |> to_int;
+    game_stage = member "game_stage" j |> to_string;
+    active_players = member "active_players" j |> to_str_list;
+    new_announcements = member "new_announcements" j |> to_str_list;
+    new_messages = member "new_messages" j |> to_str_list;
+  }
 
 let decode_cjson s =
-  failwith "Unimplemented"
+  let j = Yojson.Basic.from_string s in
+  {
+    player_id = member "player_id" j |> to_int;
+    player_action = member "player_action" j |> to_string;
+    arguments = member "arguments" j |> to_str_list;
+  }
