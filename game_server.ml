@@ -2,23 +2,35 @@ open Core.Std
 open Async.Std
 open Cohttp_async 
 
-let handler ~body:_ _sock req =
+open Data 
+open Game 
+
+let create_room conn req body = 
+    failwith "unimplemented"
+
+let join_room conn req body = 
+    failwith "unimplemented"
+
+let player_action conn req body = 
+    failwith "unimplemented"
+
+let room_status conn req body = 
+    failwith "unimplemented"
+
+let handler ~body:body conn req =
     let uri = Cohttp.Request.uri req in 
     let verb = Cohttp.Request.meth req in 
     match Uri.path uri, verb with
-        | "/create_room", `POST ->
-            Server.respond_with_string ~code:`Not_found "Room Created!"
-        | "/join_room", `POST -> 
-            Server.respond_with_string ~code:`Not_found "Room Joined!"
-        | "/player_action", `POST ->
-            Server.respond_with_string ~code:`Not_found "Player Action:"
-        | "/room_status", `GET ->
-            Server.respond_with_string ~code:`Not_found "Room Status:"
+        | "/create_room", `POST -> create_room conn req body
+        | "/join_room", `POST ->  join_room conn req body 
+        | "/player_action", `POST -> player_action conn req body
+        | "/room_status", `GET -> room_status conn req body 
         | _ , _ ->
             Server.respond_with_string ~code:`Not_found "Invalid Route."
 
 let start_server port () = 
     eprintf "Starting mafia_of_ocaml...\n"; 
+    eprintf "~-~-~-~-~-~-~~-~-~-~-~-~-~\n";
     eprintf "Listening for HTTP on port %d\n" port; 
     Cohttp_async.Server.create ~on_handler_error:`Raise 
         (Tcp.on_port port) handler

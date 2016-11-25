@@ -1,3 +1,19 @@
+type player_name = string
+type chat_message = string
+type announcement = string
+type timestamp = string
+type role = Innocent | Mafia | Dead
+type game_stage = Night | Discussion | Voting | Game_Over
+
+(** [state] is the game state of the mafia_of_ocaml game *)
+type state = {
+	day_count : int;
+	stage : game_stage;
+	players : player_name * role;
+	chat_history : (timestamp * chat_message) list ;
+	announcement_history : (timestamp * announcement) list
+}
+
 let init_state j = 
     failwith "unimplemented"
 
