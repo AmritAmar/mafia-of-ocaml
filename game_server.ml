@@ -4,16 +4,32 @@ open Cohttp_async
 
 open Data 
 open Game 
+open Ringbuffer
+
+
+type room_data = {
+    mutable game_state: state; 
+    chat_buffer: (timestamp * chat_message) ArrayBuffer.t;
+    action_buffer: client_json ArrayBuffer.t; 
+}
+
+let rooms = String.Table.create () 
+
+(* [extract_id req] returns the value of the query 
+ * param "room_id" if it is present and well formed.
+ * Requires: query param is in form /?room_id={x}
+ * Returns: Some x if well formed, None otherwise)
+ *) 
 
 let extract_id req = 
     let uri = Cohttp.Request.uri req in 
-    let lst = Uri.get_query_param uri "room_id" in 
-    match lst with 
-        | None -> None 
-        | h::t when List.length lst > 1 -> None 
-        | h::t -> h  
+    Uri.get_query_param uri "room_id"
 
 let create_room conn req body = 
+    (*
+    let id = extract_id req in 
+    if Hashtbl.mem rooms id then
+    *)
     (* extract the room id 
         if there is no binding for the id 
             make an empty room 
