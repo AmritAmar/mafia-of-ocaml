@@ -5,12 +5,6 @@ open Core.Std
 open Cohttp
 open Cohttp_async
 
-type game_state = {
-  alive_players: string list;
-  dead_players: string list;
-  last_msg: string;
-}
-
 let send_get url f =
   let code_and_json =
     Client.get (Uri.of_string url) >>= fun (resp,body) ->

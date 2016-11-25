@@ -5,12 +5,6 @@ open Core.Std
 open Cohttp
 open Cohttp_async
 
-type game_state = {
-  alive_players: string list;
-  dead_players: string list;
-  last_msg: string;
-}
-
 (**
  * [send_get url f] will send a GET request to the URL specified by [url], parse
  * the resulting JSON into a server_json record, and pass it, along with the
