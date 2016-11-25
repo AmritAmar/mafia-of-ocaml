@@ -1,2 +1,2 @@
 test:
-	ocamlbuild -pkgs yojson,ANSITerminal,oUnit test.byte && ./test.byte
+	corebuild -pkgs yojson,ANSITerminal,oUnit test.byte && ./test.byte
