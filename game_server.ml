@@ -5,10 +5,37 @@ open Cohttp_async
 open Data 
 open Game 
 
+let extract_id req = 
+    let uri = Cohttp.Request.uri req in 
+    let lst = Uri.get_query_param uri "room_id" in 
+    match lst with 
+        | None -> None 
+        | h::t when List.length lst > 1 -> None 
+        | h::t -> h  
+
 let create_room conn req body = 
+    (* extract the room id 
+        if there is no binding for the id 
+            make an empty room 
+            return a created response 
+        if there is
+            return a conflict error 
+    *)
+        
     failwith "unimplemented"
 
 let join_room conn req body = 
+    (*
+        extract the room id 
+        if the room exists
+            is the user first?
+                give them admin rights
+            get their name 
+            return ok 
+        else
+            return a 400 error
+    *)
+    
     failwith "unimplemented"
 
 let player_action conn req body = 
