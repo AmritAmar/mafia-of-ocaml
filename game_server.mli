@@ -1,7 +1,11 @@
+
+(* TODO: Fix server.mli *)
+
+(*
 open Core.Std
 open Cohttp
 open Cohttp_async
-open game
+open Game
 
 type room_id = string
 
@@ -28,3 +32,4 @@ val room_status : games -> Cohttp.Request.t ->  Cohttp_async_body.t -> state
  * [server] is a simple cohttp server that outputs back request information.
  *)
 val server : conn -> Cohttp.Request.t -> Cohttp_async_body.t -> (Cohttp.Response.t * Cohttp_async_body.t) Async.t
+*)

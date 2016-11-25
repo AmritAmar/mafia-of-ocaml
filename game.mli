@@ -1,10 +1,11 @@
-open data
+open Data
 
-type player_name : string
-type chat_message : string
-type announcement : string
-type roles = Innocent | Mafia | Dead
-type game_stage = Night | Discussion | Voting | Game_over
+type player_name = string
+type chat_message = string
+type announcement = string
+type timestamp = string
+type role = Innocent | Mafia | Dead
+type game_stage = Night | Discussion | Voting | Game_Over
 
 (** [state] is the game state of the mafia_of_ocaml game *)
 type state = {
