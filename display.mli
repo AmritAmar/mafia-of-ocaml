@@ -1,3 +1,5 @@
+open Client
+
 (**
  * Updates the chat log with the given list of strings. The list will be
  * ordered by how recent the message is (most recent to least recent). Returns
