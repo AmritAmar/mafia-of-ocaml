@@ -9,7 +9,7 @@ type server_json = {
 }
 
 type client_json = {
-  player_id: int;
+  player_id: string;
   player_action: string;
   arguments: string list;
 }

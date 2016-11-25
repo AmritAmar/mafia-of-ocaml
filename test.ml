@@ -13,17 +13,18 @@ let data_tests = [
                     new_messages=["Tyler: dank meme"] })
     );
   "encode_cjson" >:: (fun _ -> assert_equal
-    ("{\"player_id\":2,\"player_action\":\"CHAT\",\"arguments\":"
-    ^ "[\"Rachel: dank may-mays\",\"Tyler: delet this\"]}")
-    (encode_cjson { player_id=2;
+    ("{\"player_id\":\"Tyler\",\"player_action\":\"CHAT\",\"arguments\":"
+    ^ "[\"Tyler: dank may-mays\",\"Tyler: delet this\"]}")
+    (encode_cjson { player_id="Tyler";
                     player_action="CHAT";
-                    arguments=["Rachel: dank may-mays";"Tyler: delet this"] })
+                    arguments=["Tyler: dank may-mays";"Tyler: delet this"] })
     );
   "decode_sjson" >:: (fun _ -> assert_equal
     { day_count=15;
       game_stage="VOTING";
       active_players=["Michael";"Irene"];
-      new_announcements=["Fresh dank memes are available. Get them while they're hot!"];
+      new_announcements=["Fresh dank memes are available. "
+                         ^ "Get them while they're hot!"];
       new_messages=["Irene: lel"] }
     (decode_sjson
       ("{\"day_count\":15,\"game_stage\":\"VOTING\",\"active_players\":"
@@ -32,12 +33,12 @@ let data_tests = [
       ^ "[\"Irene: lel\"]}"))
     );
   "decode_cjson" >:: (fun _ -> assert_equal
-    { player_id=420;
+    { player_id="Tyler Compiler";
       player_action="COMMAND";
       arguments=["KILL";"CamelMan"] }
     (decode_cjson
-      ("{\"player_id\":420,\"player_action\":\"COMMAND\",\"arguments\":"
-      ^ "[\"KILL\",\"CamelMan\"]}"))
+      ("{\"player_id\":\"Tyler Compiler\",\"player_action\":\"COMMAND\","
+      ^ "\"arguments\":[\"KILL\",\"CamelMan\"]}"))
     );
 ]
 

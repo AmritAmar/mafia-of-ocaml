@@ -9,7 +9,7 @@ type server_json = {
 }
 
 type client_json = {
-  player_id: int;
+  player_id: string;
   player_action: string;
   arguments: string list;
 }
@@ -32,7 +32,7 @@ let encode_sjson sj =
 
 let encode_cjson cj =
   `Assoc [
-    ("player_id",         `Int cj.player_id                 );
+    ("player_id",         `String cj.player_id              );
     ("player_action",     `String cj.player_action          );
     ("arguments",         `List (to_json_list cj.arguments) );
   ]
@@ -51,7 +51,7 @@ let decode_sjson s =
 let decode_cjson s =
   let j = Yojson.Basic.from_string s in
   {
-    player_id = member "player_id" j |> to_int;
+    player_id = member "player_id" j |> to_string;
     player_action = member "player_action" j |> to_string;
     arguments = member "arguments" j |> to_str_list;
   }
