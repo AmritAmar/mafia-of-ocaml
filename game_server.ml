@@ -17,7 +17,7 @@ type server_state =
 
 type room_data = {
     state: server_state; 
-    chat_buffer: (timestamp * chat_message) list;
+    chat_buffer: (timestamp * string * string) list;
     action_buffer: (timestamp * client_json) list;
 }
 
@@ -32,6 +32,10 @@ let rooms = String.Table.create ()
 let extract_id req = 
     let uri = Cohttp.Request.uri req in 
     Uri.get_query_param uri "room_id"
+
+(* [room_op req op] passes the room information matching the room_id in [req]
+ * to [op] if it exists. Returns Bad_Request if the room_id is malformed 
+ * or the room doesn't exist.*)
 
 let room_op req op =
     let id = extract_id req in 
@@ -96,18 +100,66 @@ let join_room conn req body =
 
     Body.to_string body >>= join 
 
+
+let parse_cjson data = 
+    try decode_cjson data  
+    with _ -> 
+        Server.respond_with_string 
+            ~code: `Bad_request "Malformed client_action.json"
+ 
+
+let in_room id rd cd operation =
+    let pn = cd.player_id in 
+    let in_room = match rd.state with 
+                    | Lobby ls ->
+                        List.fold ~init:false ~f:(fun acc (n,_) -> (pn = n) || acc) ls.players
+                    | Game gs -> 
+                        List.fold ~init:false ~f:(fun acc (n,_) -> (pn = n) || acc) gs.players
+    in
+
+    if in_room then operation id rd cd 
+    else 
+        Server.respond_with_string ~code: `Bad_request (pn ^ " is not in room " ^ id)
+
+let can_chat id rd cd operation = 
+    let pn = cd.player_id in 
+    let can_chat = match rd.state with 
+                    | Lobby ls -> true 
+                    | Game gs -> 
+                        (* check if the player is alive *)
+                        (* check if we can chat in this game state *)
+                        failwith "unimplemented" 
+    in 
+
+    if can_chat then operation id rd cd 
+    else 
+        Server.respond_with_string ~code `Bad_request "Cannot Currently Chat"
+
+let write_chat id rd cd operation = 
+    let pn = cd.player_id in 
+    let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
+    let addition = (Time.now, pn, msg) in 
+    Hasthbl.set rooms id {rd with chat_buffer = (addition :: rd.chat_buffer)};
+    Server.respond_with_string ~code `OK "Done."
+
 let player_action conn req body = 
+
+    (*)
     let action body = 
         try 
             let cd = decode_cjson body in 
             match cd.player_action with 
-                | "chat" -> failwith "unimplemented"
+                | "chat" ->
+                    let chat_op id rd = 
+                        let player_name = cd.player_id in 
+
                 | "ready" -> failwith "unimplemented"
                 | "start" -> failwith "unimplemented"
                 | "vote" -> failwith "unimplemented"
                 | _ -> Server.respond_with_string ~code: `Bad_request "Invalid Command"
         with _ -> Server.respond_with_string ~code: `Bad_request "Malformed client_action.json"
-    in 
+    in
+    *) 
 
     Body.to_string body >>= action
 
