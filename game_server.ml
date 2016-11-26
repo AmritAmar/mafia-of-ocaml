@@ -6,9 +6,17 @@ open Data
 open Game 
 open Ringbuffer
 
+type lobby_state = {
+    admin_name : string;
+    players : (string * bool) list; 
+}
+
+type server_state = 
+   | Lobby of lobby_state 
+   | Game of game_state  
 
 type room_data = {
-    mutable game_state: state; 
+    mutable state: server_state; 
     chat_buffer: (timestamp * chat_message) ArrayBuffer.t;
     action_buffer: client_json ArrayBuffer.t; 
 }
@@ -26,19 +34,20 @@ let extract_id req =
     Uri.get_query_param uri "room_id"
 
 let create_room conn req body = 
-    (*
-    let id = extract_id req in 
-    if Hashtbl.mem rooms id then
-    *)
-    (* extract the room id 
-        if there is no binding for the id 
-            make an empty room 
-            return a created response 
-        if there is
-            return a conflict error 
-    *)
-        
-    failwith "unimplemented"
+    let id = extract_id req in
+    match id with 
+        | None -> 
+            Server.respond_with_string ~code:`Bad_request "Invalid room_id" 
+        | Some s when Hashtbl.mem rooms s -> 
+            Server.respond_with_string ~code:`Conflict "Room already exists." 
+        | Some s -> 
+            let room = {
+                state = Lobby {admin_name = ""; players = []};
+                chat_buffer = ArrayBuffer.make 3110;
+                action_buffer = ArrayBuffer.make 3110; 
+            } in 
+            Hashtbl.replace rooms s room; 
+            Server.respond_with_string  ~code:`Created "Room created."
 
 let join_room conn req body = 
     (*
@@ -73,7 +82,7 @@ let handler ~body:body conn req =
 
 let start_server port () = 
     eprintf "Starting mafia_of_ocaml...\n"; 
-    eprintf "~-~-~-~-~-~-~~-~-~-~-~-~-~\n";
+    eprintf "~-~-~-~-~-~-~~-~-~-~-~-~-~~-~-~-~-~-~-~~-~-~-~-~-~-~\n";
     eprintf "Listening for HTTP on port %d\n" port; 
     Cohttp_async.Server.create ~on_handler_error:`Raise 
         (Tcp.on_port port) handler

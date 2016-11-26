@@ -31,7 +31,7 @@ module ArrayBuffer : RingBuffer = struct
   let modify i amount ary = 
     i := bound (!i + amount) (Array.length ary) 
 
-  let make size = Array.create size None 
+  let make size = Array.make size None 
 
   let size ary = Array.length ary 
   

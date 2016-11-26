@@ -6,10 +6,10 @@ type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
 (** [state] is the game state of the mafia_of_ocaml game *)
-type state = {
+type game_state = {
 	day_count : int;
 	stage : game_stage;
-	players : player_name * role;
+	players : (player_name * role) list;
 	chat_history : (timestamp * chat_message) list ;
 	announcement_history : (timestamp * announcement) list
 }

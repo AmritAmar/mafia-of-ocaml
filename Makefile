@@ -5,7 +5,7 @@ default:
 	@echo "  make server    runs server"
 
 server:
-	corebuild game_server.native -pkg cohttp.async -pkg yojson && ./game_server.native
+	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte 
 
 test:
 	corebuild -pkgs yojson,ANSITerminal,oUnit test.byte && ./test.byte
