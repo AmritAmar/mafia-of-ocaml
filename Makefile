@@ -11,4 +11,4 @@ test:
 	corebuild -pkgs yojson,ANSITerminal,oUnit test.byte && ./test.byte
 
 client:
-	corebuild -pkgs yojson,async,lwt,cohttp,cohttp.async client.byte
+	corebuild -pkgs yojson,async,lwt,cohttp,cohttp.async client.byte && ./client.byte ${URL}
