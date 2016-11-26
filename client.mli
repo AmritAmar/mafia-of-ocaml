@@ -6,17 +6,18 @@ open Cohttp
 open Cohttp_async
 
 (**
- * [make_uri base_url path query_params] will turn the given base_url, path,
- * and query parameters into a Uri.t instance.
+ * [make_uri base_url path q_params ()] will turn the given base_url, path,
+ * and query parameters into a Uri.t instance. The query parameters are
+ * optional.
  *)
-val make_uri : string -> string -> (string * string) list -> Uri.t
+val make_uri : string -> string -> ?q_params:(string * string) list -> unit -> Uri.t
 
 (**
  * [send_get url f] will send a GET request to the URL specified by [url], parse
  * the resulting JSON into a server_json record, and pass it, along with the
  * status code into [f].
  *)
-val send_get : Uri.t -> (int -> server_json -> unit) -> unit
+val send_get : Uri.t -> (int * string) Deferred.t
 
 (**
  * [send_post url data f] will convert [data] into a JSON string and send it to
@@ -24,4 +25,4 @@ val send_get : Uri.t -> (int -> server_json -> unit) -> unit
  * parsed into a server_json record and passed, along with the status code,
  * into [f].
  *)
-val send_post : Uri.t -> client_json -> (int -> server_json -> unit) -> unit
+val send_post : Uri.t -> client_json -> (int * string) Deferred.t
