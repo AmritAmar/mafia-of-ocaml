@@ -1,5 +1,6 @@
 open Data
 open Display
+open Str
 open Async.Std
 open Core.Std
 open Cohttp
@@ -34,21 +35,34 @@ let send_post uri data f =
 
 (* Main REPL *)
 let _ =
-  let rec get_input () =
+  let rec get_input ?(commands=[]) () =
     new_prompt ();
     let input = read_line () in
-    if input = "" then get_input ()
-    else input
+    let rec found_in s = function
+      | [] -> false
+      | h::t -> if String.lowercase s = String.lowercase h then true
+                else found_in s t
+    in
+    if input = "" then get_input ~commands:commands ()
+    else if commands = [] then ("",input)
+    else
+      let first_word,rest = match Str.(bounded_split (regexp " ") input 2) with
+                            | h::[]    -> (h,"")
+                            | h::t::[] -> (h,t)
+                            | _        -> ("","") (* not possible *)
+      in
+      if found_in first_word commands then (first_word,rest)
+      else get_input ~commands:commands ()
   in
   if Array.length Sys.argv < 2
   then (print_endline "Usage: make client URL=[server URL]"; exit 0);
   (*update_announcements*)
   Printf.printf "%s\n" ("Welcome to mafia_of_ocaml! Please enter a username "
                         ^ "that is <= 20 characters long.");
-  let user = get_input () in
+  let _,user = get_input () in
   (*update_announcements*)
   Printf.printf "%s\n" ("Type \"join [room_id]\" to join an existing room or "
                         ^ "\"create [room_id]\" to create a new room.");
-  let room = get_input () in
-  Printf.printf "%s\t%s\n" user room
+  let cmd,room = get_input ~commands:["join";"create"] () in
+  Printf.printf "%s\t%s\t%s\n" user cmd room
 
