@@ -49,7 +49,7 @@ let create_room conn req body =
         | None -> 
             Server.respond_with_string ~code:`Bad_request "Malformed room_id" 
         | Some s when Hashtbl.mem rooms s -> 
-            Server.respond_with_string ~code:`Conflict "Room already exists." 
+            Server.respond_with_string ~code:`Bad_request "Room already exists." 
         | Some s -> 
             let room = {
                 state = Lobby {admin = ""; players = []};
@@ -57,7 +57,7 @@ let create_room conn req body =
                 action_buffer = []; 
             } in 
             Hashtbl.replace rooms s room; 
-            Server.respond_with_string  ~code:`Created "Room created."
+            Server.respond_with_string  ~code:`OK "Room created."
 
 
 let join_room conn req body = 
@@ -84,7 +84,7 @@ let join_room conn req body =
                     let result = add_player (cd.player_id) (l) in 
                     (match result with 
                         | None -> 
-                            Server.respond_with_string ~code: `Conflict "player_id in use."
+                            Server.respond_with_string ~code: `Bad_request  "player_id in use."
                         | Some l' ->
                             Hashtbl.replace rooms id {rd with state = Lobby l'}; 
                             Server.respond_with_string ~code: `OK "Joined!")  
