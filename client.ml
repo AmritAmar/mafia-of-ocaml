@@ -43,9 +43,12 @@ let _ =
   if Array.length Sys.argv < 2
   then (print_endline "Usage: make client URL=[server URL]"; exit 0);
   (*update_announcements*)
-  Printf.printf "%s\n" "Welcome to mafia_of_ocaml! Please enter a username that is <= 20 characters long.";
+  Printf.printf "%s\n" ("Welcome to mafia_of_ocaml! Please enter a username "
+                        ^ "that is <= 20 characters long.");
   let user = get_input () in
   (*update_announcements*)
-  Printf.printf "%s\n" "Type \"join [room_id]\" to join an existing room or \"create [room_id]\" to create a new room.";
+  Printf.printf "%s\n" ("Type \"join [room_id]\" to join an existing room or "
+                        ^ "\"create [room_id]\" to create a new room.");
   let room = get_input () in
   Printf.printf "%s\t%s\n" user room
+
