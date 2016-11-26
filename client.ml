@@ -14,27 +14,20 @@ let make_uri base_url path ?(q_params=[]) () =
   let new_uri = Uri.with_path new_uri path in
   Uri.add_query_params' new_uri q_params
 
-let send_get uri f =
-  let code_and_json =
-    Client.get uri >>= fun (resp,body) ->
-    let code = resp |> Response.status |> Code.code_of_status in
-    let new_ivar = Ivar.create () in
-    upon (Body.to_string body)
-         (fun s -> Ivar.fill new_ivar (code,decode_sjson s));
-    Ivar.read new_ivar
-  in
-  upon code_and_json (fun (code,sjson) -> f code sjson)
+let send_get uri =
+  Client.get uri >>= fun (resp,body) ->
+  let code = resp |> Response.status |> Code.code_of_status in
+  let new_ivar = Ivar.create () in
+  upon (Body.to_string body)
+       (fun s -> Ivar.fill new_ivar (code,s));
+  Ivar.read new_ivar
 
-let send_post uri data f =
-  let code_and_json =
-    Client.post uri ~body:(`String (encode_cjson data)) >>= fun (resp,body) ->
-    let code = resp |> Response.status |> Code.code_of_status in
-    let new_ivar = Ivar.create () in
-    upon (Body.to_string body)
-         (fun s -> Ivar.fill new_ivar (code,decode_sjson s));
-    Ivar.read new_ivar
-  in
-  upon code_and_json (fun (code,sjson) -> f code sjson)
+let send_post uri data =
+  Client.post uri ~body:(`String (encode_cjson data)) >>= fun (resp,body) ->
+  let code = resp |> Response.status |> Code.code_of_status in
+  let new_ivar = Ivar.create () in
+  upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
+  Ivar.read new_ivar
 
 (* Main REPL *)
 let _ =
@@ -69,9 +62,12 @@ let _ =
   Printf.printf "%s\n" ("Type \"join [room_id]\" to join an existing room or "
                         ^ "\"create [room_id]\" to create a new room.");
   let cmd,room = get_input ~commands:["join";"create"] () in
-  send_post (make_uri server_url (cmd ^ "_room") ~q_params:[("room_id",room)] ())
-            {player_id=user; player_action="join"; arguments=[]}
-            (fun c sj -> Printf.printf "%d\n" c)
+  let f =
+    send_post
+          (make_uri server_url (cmd ^ "_room") ~q_params:[("room_id",room)] ())
+          {player_id=user; player_action="join"; arguments=[]}
+  in
+  upon f (fun (code,body) -> print_endline body; print_int code; print_newline ())
 
 let _ =
   Scheduler.go ()
