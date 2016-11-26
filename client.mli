@@ -9,7 +9,7 @@ open Cohttp_async
  * [make_uri base_url path query_params] will turn the given base_url, path,
  * and query parameters into a Uri.t instance.
  *)
-val make_uri : string -> string -> (string * string) list -> Uri.t
+val make_uri : string -> string -> ?q_params:(string * string) list -> unit -> Uri.t
 
 (**
  * [send_get url f] will send a GET request to the URL specified by [url], parse

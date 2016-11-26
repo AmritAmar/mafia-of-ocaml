@@ -6,10 +6,13 @@ open Core.Std
 open Cohttp
 open Cohttp_async
 
-let make_uri base_url path query_params =
+(* Case insensitive equals *)
+let (+=+) s1 s2 = (String.lowercase s1) = (String.lowercase s2)
+  
+let make_uri base_url path ?(q_params=[]) () =
   let new_uri = Uri.of_string base_url in
   let new_uri = Uri.with_path new_uri path in
-  Uri.add_query_params' new_uri query_params
+  Uri.add_query_params' new_uri q_params
 
 let send_get uri f =
   let code_and_json =
@@ -40,22 +43,24 @@ let _ =
     let input = read_line () in
     let rec found_in s = function
       | [] -> false
-      | h::t -> if String.lowercase s = String.lowercase h then true
-                else found_in s t
+      | h::t -> if s +=+ h then true else found_in s t
     in
     if input = "" then get_input ~commands:commands ()
     else if commands = [] then ("",input)
     else
       let first_word,rest = match Str.(bounded_split (regexp " ") input 2) with
-                            | h::[]    -> (h,"")
-                            | h::t::[] -> (h,t)
+                            | h::[]    -> (String.lowercase h,"")
+                            | h::t::[] -> (String.lowercase h,t)
                             | _        -> ("","") (* not possible *)
       in
       if found_in first_word commands then (first_word,rest)
       else get_input ~commands:commands ()
   in
-  if Array.length Sys.argv < 2
-  then (print_endline "Usage: make client URL=[server URL]"; exit 0);
+  let server_url = if Array.length Sys.argv < 2
+                   then (print_endline "Usage: make client URL=[server URL]";
+                         exit 0)
+                   else Sys.argv.(1)
+  in
   (*update_announcements*)
   Printf.printf "%s\n" ("Welcome to mafia_of_ocaml! Please enter a username "
                         ^ "that is <= 20 characters long.");
@@ -64,5 +69,9 @@ let _ =
   Printf.printf "%s\n" ("Type \"join [room_id]\" to join an existing room or "
                         ^ "\"create [room_id]\" to create a new room.");
   let cmd,room = get_input ~commands:["join";"create"] () in
-  Printf.printf "%s\t%s\t%s\n" user cmd room
+  send_post (make_uri server_url (cmd ^ "_room") ~q_params:[("room_id",room)] ())
+            {player_id=user; player_action="join"; arguments=[]}
+            (fun c sj -> Printf.printf "%d\n" c)
 
+let _ =
+  Scheduler.go ()
