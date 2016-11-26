@@ -17,9 +17,8 @@ type server_state =
 
 type room_data = {
     state: server_state; 
-    (* TODO: Write Immutable ArrayBuffer? (gah) *)
-    chat_buffer: (timestamp * chat_message) ArrayBuffer.t;
-    action_buffer: client_json ArrayBuffer.t; 
+    chat_buffer: (timestamp * chat_message) list;
+    action_buffer: (timestamp * client_json) list;
 }
 
 let rooms = String.Table.create () 
@@ -54,8 +53,8 @@ let create_room conn req body =
         | Some s -> 
             let room = {
                 state = Lobby {admin = ""; players = []};
-                chat_buffer = ArrayBuffer.make 3110;
-                action_buffer = ArrayBuffer.make 3110; 
+                chat_buffer = [];
+                action_buffer = []; 
             } in 
             Hashtbl.replace rooms s room; 
             Server.respond_with_string  ~code:`Created "Room created."
@@ -64,7 +63,7 @@ let create_room conn req body =
 let join_room conn req body = 
 
     let add_player s l =  
-        let in_use = List.fold ~init:true ~f:(fun acc (n,_) -> (n = s) && acc) l.players in 
+        let in_use = List.fold ~init:false ~f:(fun acc (n,_) -> (n = s) || acc) l.players in 
         let too_long = String.length s >= 20 in 
 
         if (in_use || too_long) then None 
@@ -98,7 +97,19 @@ let join_room conn req body =
     Body.to_string body >>= join 
 
 let player_action conn req body = 
-    failwith "unimplemented"
+    let action body = 
+        try 
+            let cd = decode_cjson body in 
+            match cd.player_action with 
+                | "chat" -> failwith "unimplemented"
+                | "ready" -> failwith "unimplemented"
+                | "start" -> failwith "unimplemented"
+                | "vote" -> failwith "unimplemented"
+                | _ -> Server.respond_with_string ~code: `Bad_request "Invalid Command"
+        with _ -> Server.respond_with_string ~code: `Bad_request "Malformed client_action.json"
+    in 
+
+    Body.to_string body >>= action
 
 let room_status conn req body = 
     failwith "unimplemented"
