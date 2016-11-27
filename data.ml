@@ -5,7 +5,7 @@ type server_json = {
   game_stage: string;
   active_players: string list;
   new_announcements: string list;
-  new_messages: string list;
+  new_messages: (string * string) list;
 }
 
 type client_json = {
@@ -26,7 +26,11 @@ let encode_sjson sj =
     ("game_stage",        `String sj.game_stage                     );
     ("active_players",    `List (to_json_list sj.active_players)    );
     ("new_announcements", `List (to_json_list sj.new_announcements) );
-    ("new_messages",      `List (to_json_list sj.new_messages)      );
+    ("new_messages",      `List (List.map
+                                 (fun (p_id,msg) -> `Assoc [
+                                                     ("player_id",`String p_id);
+                                                     ("message",`String msg)])
+                                 sj.new_messages)                   );
   ]
   |> Yojson.to_string
 
@@ -45,7 +49,10 @@ let decode_sjson s =
     game_stage = member "game_stage" j |> to_string;
     active_players = member "active_players" j |> to_str_list;
     new_announcements = member "new_announcements" j |> to_str_list;
-    new_messages = member "new_messages" j |> to_str_list;
+    new_messages = member "new_messages" j
+                   |> to_list
+                   |> List.map (fun n -> (member "player_id" n |> to_string,
+                                          member "message" n |> to_string));
   }
 
 let decode_cjson s =

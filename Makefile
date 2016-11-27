@@ -6,7 +6,7 @@ default:
 	@echo "  make game                      runs game"
 
 server:
-	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte 
+	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte
 
 test:
 	corebuild -pkgs yojson,ANSITerminal,oUnit test.byte && ./test.byte
