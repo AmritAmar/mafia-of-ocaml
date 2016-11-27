@@ -1,17 +1,16 @@
-open Client_state
-
 (**
  * Updates the chat log with the given list of strings. The list will be
  * ordered by how recent the message is (most recent to least recent). Returns
  * the cursor to its position before this function was called.
  *)
-val update_chat : string list -> unit
+val update_chat : (string * string) list -> unit
 
 (**
- * Updates the display of the game state with the given client_state record.
- * Returns the cursor to its position before this function was called.
+ * [update_game_state day game_stage alive dead] will update the display of
+ * the game state with the given parameters. Returns the cursor to its
+ * position before this function was called.
  *)
-val update_game_state : client_state -> unit
+val update_game_state : int -> string -> string list -> string list -> unit
 
 (**
  * Updates the announcements displayed, replacing the old announcements with
