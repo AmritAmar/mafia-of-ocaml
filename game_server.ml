@@ -155,7 +155,6 @@ let write_chat {id; rd; cd} =
     Server.respond_with_string ~code: `OK "Done."
 
 let write_ready {id; rd; cd} = 
-    
     let update_players acc (n,s) = 
         if n = cd.player_id then (n,true)::acc 
                             else (n,s)::acc 
@@ -168,14 +167,38 @@ let write_ready {id; rd; cd} =
             Hashtbl.set rooms id {rd with state = Lobby {ls with players = pl'}}; 
             Server.respond_with_string ~code: `OK "Done."
 
-let is_admin {id; rd; cd} = 
-    failwith "unimplemented"
+let is_admin ab = 
+    let {id; rd; cd} = ab in
+    match rd.state with 
+        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Cannot be Admin in Game"))
+        | Lobby ls ->
+            if ls.admin = cd.player_id then ab 
+            else 
+                 raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Player is not admin."))
 
-let all_ready {id; rd; cd} =
-     failwith "unimplemented"
+let all_ready ab =
+     let {id; rd; cd} = ab in 
 
-let write_game {id; rd; cd} = 
-    failwith "unimplemented"
+     let check_ready acc (_,ready) = acc && ready in 
+
+     match rd.state with 
+        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Players Already in Game"))
+        | Lobby ls -> 
+            let ready = List.fold ~init:false ~f:check_ready ls.players in 
+            if ready then ab 
+            else 
+                raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Not all players are ready."))
+
+let write_game ab = 
+    let {id; rd; cd} = ab in 
+    match rd.state with 
+        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Game already in progress"))
+        | Lobby ls ->
+            let players = List.fold ~init:[] ~f:(fun acc (pn,_) -> pn :: acc) ls.players in 
+            let gs = Game.init_state players in
+            (* TODO: Launch Room Refresh Daemon *) 
+            Hashtbl.set rooms id {rd with state = Game gs}; 
+            Server.respond_with_string ~code: `OK "Done."
 
 let can_vote {id; rd; cd} = 
     failwith "unimplemented"
