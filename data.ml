@@ -27,9 +27,10 @@ let encode_sjson sj =
     ("active_players",    `List (to_json_list sj.active_players)    );
     ("new_announcements", `List (to_json_list sj.new_announcements) );
     ("new_messages",      `List (List.map
-                                 (fun (p_id,msg) -> `Assoc [
-                                                     ("player_id",`String p_id);
-                                                     ("message",`String msg)])
+                                 (fun (p_id,msg) ->
+                                  `Assoc [
+                                    ("player_id",`String p_id);
+                                    ("message",`String msg)])
                                  sj.new_messages)                   );
   ]
   |> Yojson.to_string
