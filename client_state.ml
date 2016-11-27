@@ -13,7 +13,11 @@ type client_state = {
 }
 
 let update_players cs active =
-  failwith "Unimplemented"
+  (if cs.alive_players <> []
+   then cs.dead_players <- (List.filter (fun x -> not (List.mem x active))
+                                        cs.alive_players)
+                           @ cs.dead_players);
+  cs.alive_players <- active
 
 let update_msgs cs ts new_msgs =
   cs.timestamp <- ts;
