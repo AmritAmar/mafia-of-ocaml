@@ -1,9 +1,10 @@
+open Core.Std
 open Data
 
 type player_name = string
 type chat_message = string
 type announcement = string
-type timestamp = string
+type timestamp = Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
@@ -12,7 +13,6 @@ type game_state = {
 	day_count : int;
 	stage : game_stage;
 	players : (player_name * role) list;
-	chat_history : (timestamp * chat_message) list ;
 	announcement_history : (timestamp * announcement) list
 }
 
