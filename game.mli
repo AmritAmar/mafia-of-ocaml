@@ -1,9 +1,10 @@
 open Data
+open Core
 
 type player_name = string
 type chat_message = string
 type announcement = string
-type timestamp = string
+type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
@@ -15,6 +16,7 @@ type game_state = {
 	chat_history : (timestamp * chat_message) list ;
 	announcement_history : (timestamp * announcement) list
 }
+
 
 (** [init_state] is the initial state of the game as
  * determined by JSON data object [j] *)
