@@ -15,8 +15,9 @@ type client_state = {
 let update_players cs active =
   failwith "Unimplemented"
 
-let update_msgs cs timestamp new_msgs =
-  failwith "Unimplemented"
+let update_msgs cs ts new_msgs =
+  cs.timestamp <- ts;
+  cs.msgs <- new_msgs @ cs.msgs
 
 let update_client_state cs sj =
   failwith "Unimplemented"
