@@ -71,6 +71,10 @@ let _ =
                          exit 0)
                    else Sys.argv.(1)
   in
+  let server_url = (if String.sub server_url ~pos:0 ~len:7 = "http://"
+                    then "" else "http://")
+                    ^ server_url
+  in
   upon (
   server_verify (fun () ->
     (*update_announcements*)
