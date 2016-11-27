@@ -98,7 +98,7 @@ let night_to_disc st updates =
     let list_killed = (List.fold_left (fun a x -> x.arguments@a) [] updates) in
     let updated_players = 
         List.fold_left (fun a x -> kill_player x a) st.players list_killed in
-    {day_count = st.day_count; stage = st.stage; 
+    {day_count = st.day_count+1; stage = Discussion; 
         players = updated_players; 
         chat_history = st.chat_history;
         announcement_history = st.announcement_history}
@@ -107,13 +107,23 @@ let night_to_disc st updates =
  * Assumes it only receives chats during disc
  *)
 let disc_to_voting st updates = 
-    handle_message st (List.fold_left (fun a x -> x.arguments@a) [] updates)
+    let s = handle_message st 
+        (List.fold_left (fun a x -> x.arguments@a) [] updates) in
+    {day_count = s.day_count; stage = Voting; 
+        players = s.players; 
+        chat_history = s.chat_history;
+        announcement_history = s.announcement_history}
 
 (*
  * Assumes it only receives votes during voting, and people only vote once
  *)
 let voting_to_night st updates = 
-    handle_vote st (List.fold_left (fun a x -> x.arguments@a) [] updates)
+    let s = handle_vote st 
+        (List.fold_left (fun a x -> x.arguments@a) [] updates)
+    {day_count = s.day_count; stage = Night; 
+        players = s.players; 
+        chat_history = s.chat_history;
+        announcement_history = s.announcement_history}
 
 let step_game st updates = 
     match st.stage with 
@@ -121,5 +131,4 @@ let step_game st updates =
     | Discussion -> disc_to_voting st updates
     | Voting -> voting_to_night st updates
     | Game_Over -> st
-
     
