@@ -287,7 +287,7 @@ let erase_box x y width height =
   print_object x y [] lst;
   ()
 
-let update_announcements a () =
+let update_announcements a =
   save_cursor();
   erase_box 68 8 25 27;
   print_list 68 8 [cyan] 25 a 2;
@@ -304,7 +304,7 @@ let rec snd_lst lst =
   | [] -> []
   | h::t -> (snd h)::(snd_lst t)
 
-let update_chat log () =
+let update_chat log =
   save_cursor();
   erase_box 8 17 47 20;
   print_list 8 17 [cyan] 15 (fst_lst log) 1;
@@ -312,7 +312,7 @@ let update_chat log () =
   restore_cursor();
   ()
 
-let update_game_state day game_stage alive dead () =
+let update_game_state day game_stage alive dead =
   save_cursor();
   erase_box 12 3 4 1;
   erase_box 8 5 46 7;
@@ -323,7 +323,7 @@ let update_game_state day game_stage alive dead () =
   restore_cursor();
   ()
 
-let init () =
+let init =
   resize width height;
   erase Screen;
   print_object 62 1 [magenta] brick_wall;
@@ -332,14 +332,14 @@ let init () =
   ()
 
 let show_banner () =
-  init();
+  init;
   print_object 4 2 [yellow] scroll;
   print_object 16 10 [red] title;
   print_object 16 25 [green] authors;
   ()
 
 let show_state_and_chat () =
-  init();
+  init;
   print_object 1 1 [yellow] game_state;
   print_object 3 14 [blue] chat_log;
   print_object 8 3 [Bold;yellow] ["DAY"];
@@ -357,10 +357,10 @@ let new_prompt () =
   ()
 
 let () =
-  show_banner ();
+  (* show_banner (); *)
   show_state_and_chat();
-  update_announcements test_a ();
-  update_chat test_c ();
-  update_game_state 20 "Morning" alive dead ();
+  update_announcements test_a;
+  update_chat test_c;
+  update_game_state 20 "Morning" alive dead;
   new_prompt ();
 
