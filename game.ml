@@ -69,7 +69,7 @@ let handle_vote (st:game_state) (players:player_name list)  =
          players = kill_player voted st.players; 
          chat_history = st.chat_history; 
          announcement_history = (Time.now (),
-            voted^" was voted guilty and has been executed\n"^
+            voted^" was voted guilty and has been executed.\n"^
             voted^" was a Mafia! Nice work!")
              ::st.announcement_history})
     else 
@@ -101,7 +101,10 @@ let night_to_disc st updates =
     {day_count = st.day_count+1; stage = Discussion; 
         players = updated_players; 
         chat_history = st.chat_history;
-        announcement_history = st.announcement_history}
+        announcement_history = (Time.now (),
+             "Good Morning! Last night,"^(String.concat ", " list_killed)^
+             "were killed in their sleep by the Mafia :( RIP.")
+             ::st.announcement_history}
 
 (*
  * Assumes it only receives chats during disc
@@ -112,18 +115,24 @@ let disc_to_voting st updates =
     {day_count = s.day_count; stage = Voting; 
         players = s.players; 
         chat_history = s.chat_history;
-        announcement_history = s.announcement_history}
+        announcement_history = (Time.now (),
+             "Discussion time is now over. \n"^
+             "Please vote on a player that could be a member of the Mafia.")
+             ::s.announcement_history}
 
 (*
  * Assumes it only receives votes during voting, and people only vote once
  *)
 let voting_to_night st updates = 
     let s = handle_vote st 
-        (List.fold_left (fun a x -> x.arguments@a) [] updates)
+        (List.fold_left (fun a x -> x.arguments@a) [] updates) in
     {day_count = s.day_count; stage = Night; 
         players = s.players; 
         chat_history = s.chat_history;
-        announcement_history = s.announcement_history}
+        announcement_history = (Time.now (),
+             "It's getting late. \n"^
+             "Its night time - go sleep unless you have someone to visit :)")
+             ::s.announcement_history}
 
 let step_game st updates = 
     match st.stage with 
