@@ -63,7 +63,8 @@ let _ =
   in
   let rec server_verify f =
     f () >>= fun (code,body) ->
-    if code = 200 then return (code,body) else server_verify f
+    if code = 200 then return (code,body)
+    else (print_endline body; server_verify f)
   in
   let server_url = if Array.length Sys.argv < 2
                    then (print_endline "Usage: make client URL=[server URL]";
@@ -97,7 +98,7 @@ let _ =
   print_endline ("player_id: " ^ client_s.player_id);
   print_endline ("Joined lobby for room " ^ client_s.room_id);
   return 0;
-  ) (fun _ -> print_endline "exit";)
+  ) (fun _ -> print_endline "exit"; exit 0)
 
 let _ =
   Scheduler.go ()
