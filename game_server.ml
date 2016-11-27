@@ -21,11 +21,13 @@ type room_data = {
     action_buffer: (timestamp * client_json) list;
 }
 
-type action = {id: string; rd: room_data; cd: client_json}
+type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
 
 let rooms = String.Table.create () 
 
+(* [respond code msg] is an alias for Server.respond_with_string *)
+let respond code msg = Server.respond_with_string ~code:code msg 
 
 (* [extract_id req] returns the value of the query 
  * param "room_id" if it is present and well formed.
@@ -49,9 +51,9 @@ let room_op req op =
     let id = extract_id req in 
     match id with 
         | None -> 
-            Server.respond_with_string ~code: `Bad_request "Malformed room_id."
+            respond `Bad_request "Malformed room_id."
         | Some s when not (Hashtbl.mem rooms s) -> 
-            Server.respond_with_string ~code: `Bad_request "Room doesn't exist."
+            respond `Bad_request "Room doesn't exist."
         | Some s ->
             let room_data = Hashtbl.find_exn rooms s in op s room_data 
 
@@ -59,9 +61,9 @@ let create_room conn req body =
     let id = extract_id req in
     match id with 
         | None -> 
-            Server.respond_with_string ~code:`Bad_request "Malformed room_id" 
+            respond`Bad_request "Malformed room_id" 
         | Some s when Hashtbl.mem rooms s -> 
-            Server.respond_with_string ~code:`Bad_request "Room already exists." 
+            respond`Bad_request "Room already exists." 
         | Some s -> 
             let room = {
                 state = Lobby {admin = ""; players = []};
@@ -90,33 +92,42 @@ let join_room conn req body =
             let lobby_op id rd = 
                 match rd.state with 
                     | Game _ ->
-                        Server.respond_with_string ~code: `Bad_request "Game already in progress."
+                        respond `Bad_request "Game already in progress."
                     | Lobby l ->
                     let result = add_player (cd.player_id) (l) in 
                     (match result with 
                         | None -> 
-                            Server.respond_with_string ~code: `Bad_request  "player_id in use."
+                            respond `Bad_request  "player_id in use."
                         | Some l' ->
                             Hashtbl.replace rooms id {rd with state = Lobby l'}; 
-                            Server.respond_with_string ~code: `OK "Joined!")  
+                            respond `OK "Joined!")  
             in 
             room_op (req) (lobby_op)
-        with _ -> Server.respond_with_string ~code: `Bad_request "Malformed client_action.json"
+        with _ -> respond `Bad_request "Malformed client_action.json"
 
     in 
 
     Body.to_string body >>= join 
 (* -------------------------------------------------------- *)
 
+(* [load_room req cd] returns an action_bundle using the room_id located within
+ * the query paramaters of [req]. 
+ * Requires: 
+ *  - room_id is well formed and registered, Action_Error otherwise *)
+
 let load_room req cd = 
     let id = extract_id req in 
     match id with 
         | None -> 
-            raise (Action_Error (Server.respond_with_string ~code: `Bad_request "Malformed room_id."))
+            raise (Action_Error (respond `Bad_request "Malformed room_id."))
         | Some s when not (Hashtbl.mem rooms s) -> 
-            raise (Action_Error (Server.respond_with_string ~code: `Bad_request "Room doesn't exist."))
+            raise (Action_Error (respond `Bad_request "Room doesn't exist."))
         | Some s ->
             let room_data = Hashtbl.find_exn rooms s in {id = s; rd = room_data; cd = cd}
+
+(* [in_room ab] is [ab] if the player specified in the action bundle's client data 
+ * is within the room specified in the action bundle's room_data. 
+ * Returns Action_Error otherwise. *)
 
 let in_room ab =
     let {id; rd; cd} = ab in 
@@ -130,7 +141,10 @@ let in_room ab =
 
     if in_room then ab
     else 
-        raise (Action_Error (Server.respond_with_string ~code: `Bad_request (pn ^ " is not in room " ^ id)))
+        raise (Action_Error (respond `Bad_request (pn ^ " is not in room " ^ id)))
+
+(* [can_chat ab] is [ab] if the player specified in the action bundle's client_data 
+ * is able to chat in the supplied room. Returns Action Error otherwise *)
 
 let can_chat ab = 
     let {id; rd; cd} = ab in 
@@ -145,14 +159,21 @@ let can_chat ab =
 
     if can_chat then ab 
     else 
-        raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Cannot Currently Chat"))
+        raise (Action_Error (respond`Bad_request "Cannot Currently Chat"))
+
+(* [write_chat ab] adds the client's chat message into the chat buffer and 
+ * returns an 'OK response *)
 
 let write_chat {id; rd; cd} = 
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
     let addition = ((Time.now ()), pn, msg) in 
     Hashtbl.set rooms id {rd with chat_buffer = (addition :: rd.chat_buffer)};
-    Server.respond_with_string ~code: `OK "Done."
+    respond `OK "Done."
+
+(* [write_ready ab] toggles the player's ready state given the client_data and 
+ * room_data within the supplied action_bundle. 
+ * Requires: the room within [ab] is in lobby mode. *)
 
 let write_ready {id; rd; cd} = 
     let update_players acc (n,s) = 
@@ -161,20 +182,27 @@ let write_ready {id; rd; cd} =
     in 
     
     match rd.state with 
-        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Cannot Ready in Game."))
+        | Game _ -> raise (Action_Error (respond`Bad_request "Cannot Ready in Game."))
         | Lobby ls ->
             let pl' = List.fold ~init:[] ~f:update_players ls.players in 
             Hashtbl.set rooms id {rd with state = Lobby {ls with players = pl'}}; 
-            Server.respond_with_string ~code: `OK "Done."
+            respond `OK "Done."
+
+(* [is_admin ab] is [ab] if the palyer specified within the action_bundle is an 
+ * admin in the action_bundle's supplied room, and the room is in lobby mode. 
+ * Returns Action_Error otherwise. *)
 
 let is_admin ab = 
     let {id; rd; cd} = ab in
     match rd.state with 
-        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Cannot be Admin in Game"))
+        | Game _ -> raise (Action_Error (respond`Bad_request "Cannot be Admin in Game"))
         | Lobby ls ->
             if ls.admin = cd.player_id then ab 
             else 
-                 raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Player is not admin."))
+                 raise (Action_Error (respond`Bad_request "Player is not admin."))
+
+(* [all_ready ab] is [ab] if all the players in the room specified by [ab] are 
+ * have readied up, and the room is in lobby mode. Returns Action_Error otherwise *)
 
 let all_ready ab =
      let {id; rd; cd} = ab in 
@@ -182,29 +210,44 @@ let all_ready ab =
      let check_ready acc (_,ready) = acc && ready in 
 
      match rd.state with 
-        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Players Already in Game"))
+        | Game _ -> raise (Action_Error (respond`Bad_request "Players Already in Game"))
         | Lobby ls -> 
             let ready = List.fold ~init:false ~f:check_ready ls.players in 
             if ready then ab 
             else 
-                raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Not all players are ready."))
+                raise (Action_Error (respond`Bad_request "Not all players are ready."))
+
+(* [write_game ab] moves a game from lobby mode into game mode, and launches the 
+ * associated game_state daemons. Requires: Room is in Lobby Mode *)
 
 let write_game ab = 
     let {id; rd; cd} = ab in 
     match rd.state with 
-        | Game _ -> raise (Action_Error (Server.respond_with_string ~code:`Bad_request "Game already in progress"))
+        | Game _ -> raise (Action_Error (respond`Bad_request "Game already in progress"))
         | Lobby ls ->
             let players = List.fold ~init:[] ~f:(fun acc (pn,_) -> pn :: acc) ls.players in 
             let gs = Game.init_state players in
             (* TODO: Launch Room Refresh Daemon *) 
             Hashtbl.set rooms id {rd with state = Game gs}; 
-            Server.respond_with_string ~code: `OK "Done."
+            respond `OK "Done."
 
-let can_vote {id; rd; cd} = 
+(* [can_vote ab] is [ab] if the player specified within [ab] can vote in the current 
+ * game_state. Returns Action_Error otherwise *)
+
+let can_vote ab = 
     failwith "unimplemented"
 
-let write_vote {id; rd; cd} = 
-    failwith "unimplemented"
+(* [write_vote ab] adds the vote specified within the client data of the action buffer 
+ * to the room's action_queue. Requires that the room is in game mode. *)
+
+let write_vote ab = 
+    let {id; rd; cd} = ab in 
+    match rd.state with 
+        | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby"))
+        | Game gs ->
+            let actbuf' = (Time.now (), cd) :: rd.action_buffer in 
+            Hashtbl.set rooms id {rd with action_buffer = actbuf'};  
+            respond `OK "Done."
 
 let player_action conn req body = 
     let action body = 
@@ -216,10 +259,10 @@ let player_action conn req body =
                 | "ready" -> ab |> write_ready  
                 | "start" -> ab |> is_admin |> all_ready |> write_game 
                 | "vote" -> ab |> can_vote |> write_vote 
-                | _ -> Server.respond_with_string ~code: `Bad_request "Invalid Command"
+                | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
-            | _ -> Server.respond_with_string ~code: `Bad_request "Malformed client_action.json"
+            | _ -> respond `Bad_request "Malformed client_action.json"
     in
 
     Body.to_string body >>= action
@@ -236,7 +279,7 @@ let handler ~body:body conn req =
         | "/player_action", `POST -> player_action conn req body
         | "/room_status", `GET -> room_status conn req body 
         | _ , _ ->
-            Server.respond_with_string ~code:`Not_found "Invalid Route."
+            respond`Not_found "Invalid Route."
 
 let start_server port () = 
     eprintf "Starting mafia_of_ocaml...\n"; 
