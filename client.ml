@@ -37,6 +37,8 @@ let send_post uri ?data () =
 let _ =
   let client_s = { player_id="";
                    room_id="";
+                   day_count=0;
+                   game_stage="";
                    alive_players=[];
                    dead_players=[];
                    timestamp="";
@@ -101,11 +103,29 @@ let _ =
   print_endline body;
   print_endline ("player_id: " ^ client_s.player_id);
   print_endline ("Joined lobby for room " ^ client_s.room_id);
-  (* TODO: GET request loop *)
+  let user = client_s.player_id in
+  let room = client_s.room_id in
+  (* GET request loop *)
+  let rec server_update_loop () =
+    let get_update =
+      send_get
+        (make_uri server_url ("room_status") ~q_params:[("room_id",room);
+                                                        ("player_id",user)] ())
+    in
+    upon get_update (fun (code,body) -> 
+      if code = 200 then
+        let sj = decode_sjson body in
+        update_client_state client_s sj;
+        get_recent_announcements client_s |> update_announcements;
+        get_recent_msgs client_s |> update_chat;
+        if client_s.game_stage = "GAME_OVER"
+        then exit 0;
+      else server_update_loop ()
+    )
+  in
+  (* POST request loop *)
   let rec user_input_loop () =
     let cmd,args = get_input () in
-    let user = client_s.player_id in
-    let room = client_s.room_id in
     send_post
       (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
       ~data:{player_id=user; player_action=cmd; arguments=[args]}
@@ -115,6 +135,7 @@ let _ =
     print_endline body;
     user_input_loop ()
   in
+  server_update_loop ();
   user_input_loop ()
 
   ) (fun _ -> print_endline "exit"; exit 0)
