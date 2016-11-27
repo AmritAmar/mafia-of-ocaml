@@ -26,8 +26,15 @@ let update_client_state cs sj =
   cs.announcements <- sj.new_announcements @ cs.announcements;
   cs.msgs <- sj.new_messages @ cs.msgs;
 
+(* get top n elements of list *)
+let rec select_top n lst =
+  if n = 0 then []
+  else match lst with
+       | []   -> []
+       | h::t -> h::(select_top (n-1) t)
+
 let get_recent_announcements cs =
-  failwith "Unimplemented"
+  select_top 10 cs.announcements
 
 let get_recent_msgs cs =
-  failwith "Unimplemented"
+  select_top 10 cs.msgs
