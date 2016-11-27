@@ -94,14 +94,29 @@ let _ =
     >>= fun (code,body) ->
     if code <> 200 then return (code,body)
     else send_post
-         (make_uri server_url ("join_room") ~q_params:[("room_id",room)] ())
-         ~data:{player_id=client_s.player_id; player_action="join"; arguments=[]}
+         (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
+         ~data:{player_id=user; player_action="join"; arguments=[]}
          ()
   ) >>= fun (_, body) ->
   print_endline body;
   print_endline ("player_id: " ^ client_s.player_id);
   print_endline ("Joined lobby for room " ^ client_s.room_id);
-  return 0;
+  (* TODO: GET request loop *)
+  let rec user_input_loop () =
+    let cmd,args = get_input () in
+    let user = client_s.player_id in
+    let room = client_s.room_id in
+    send_post
+      (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
+      ~data:{player_id=user; player_action=cmd; arguments=[args]}
+      ()
+    >>= fun (code,body) ->
+    (*update_announcements*)
+    print_endline body;
+    user_input_loop ()
+  in
+  user_input_loop ()
+
   ) (fun _ -> print_endline "exit"; exit 0)
 
 let _ =
