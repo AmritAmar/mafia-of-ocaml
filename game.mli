@@ -1,10 +1,11 @@
 open Core.Std
 open Data
+open Core
 
 type player_name = string
 type chat_message = string
 type announcement = string
-type timestamp = Time.t
+type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
@@ -16,6 +17,7 @@ type game_state = {
 	announcement_history : (timestamp * announcement) list
 }
 
+
 (** [init_state] is the initial state of the game as
  * determined by JSON data object [j] *)
 val init_state : string -> game_state
@@ -23,9 +25,6 @@ val init_state : string -> game_state
 (** [handle_vote] handles players votes during Voting stage to alter the state 
   * of the game *)
 val handle_vote : game_state -> player_name list -> game_state
-
-(** [handle_message] handles incoming chat from players*)
-val handle_message :  game_state -> chat_message list -> game_state
 
 (** [night_to_disc] processes game state changes when going from night stage 
   * to discussion stage*)
