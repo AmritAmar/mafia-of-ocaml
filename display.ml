@@ -6,7 +6,13 @@ let alive = [ "Clarkson" ; "Myers" ]
 
 let test_a = ["hello this is a very long announcement that
   I really had to announce"; "this is another very long
-  announcement just for testing"]
+  announcement just for testing"(* ; "this is another very long
+  announcement just for testing"; "this is another very long
+  announcement just for testing"; "this is another very long
+  announcement just for testing this is another very long
+  announcement just for testing this is another very long
+  announcement just for testing this is another very long
+  announcement just for testing" *)]
 
 let test_c = [("Clarkson","this is a really cool game");
 ("Myers","I agree with Clarkson that this is a cool game")]
@@ -194,7 +200,9 @@ let paper = [
 
 let width = 100
 
-let height = 40
+let height = 41
+
+
 
 
 (* let s2 x y style n str =
@@ -269,8 +277,19 @@ let rec print_list x y style n lst skip =
             print_object x y style (split_string n h);
             print_list x (y+len+skip) style n t skip
 
+let erase_box x y width height =
+  let spaces = String.make width ' ' in
+  let lst = let rec fill h =
+              match h with
+              | 0 -> []
+              | n -> spaces::(fill (n-1))
+            in fill height in
+  print_object x y [] lst;
+  ()
+
 let update_announcements a () =
   save_cursor();
+  erase_box 68 8 25 27;
   print_list 68 8 [cyan] 25 a 2;
   restore_cursor();
   ()
@@ -285,17 +304,22 @@ let rec snd_lst lst =
   | [] -> []
   | h::t -> (snd h)::(snd_lst t)
 
-let update_chat c () =
+let update_chat log () =
   save_cursor();
-  print_list 8 17 [cyan] 15 (fst_lst c) 1;
-  print_list 17 17 [yellow] 40 (snd_lst c) 1;
+  erase_box 8 17 47 20;
+  print_list 8 17 [cyan] 15 (fst_lst log) 1;
+  print_list 17 17 [yellow] 40 (snd_lst log) 1;
   restore_cursor();
   ()
 
-let update_game_state gs () =
+let update_game_state day game_stage alive dead () =
   save_cursor();
-  print_list 8 5 [green] 20 gs.alive_players 0;
-  print_list 33 5 [red] 20 gs.dead_players 0;
+  erase_box 12 3 4 1;
+  erase_box 8 5 46 7;
+  print_object 12 3 [blue] [string_of_int day];
+  print_object 8 5 [magenta] [game_stage];
+  print_list 21 5 [green] 20 alive 0;
+  print_list 38 5 [red] 20 dead 0;
   restore_cursor();
   ()
 
@@ -318,14 +342,15 @@ let show_state_and_chat () =
   init();
   print_object 1 1 [yellow] game_state;
   print_object 3 14 [blue] chat_log;
-  print_object 8 3 [Bold;yellow] ["ALIVE"];
-  print_object 33 3 [Bold;yellow] ["DEAD"];
+  print_object 8 3 [Bold;yellow] ["DAY"];
+  print_object 21 3 [Bold;yellow] ["ALIVE"];
+  print_object 38 3 [Bold;yellow] ["DEAD"];
   print_object 40 15 [Bold;white;on_blue] [" CHAT LOG "];
   ()
 
 
 let new_prompt () =
-  set_cursor 2 height;
+  set_cursor 2 (height-1);
   erase Eol;
   print_string [] "> ";
   let _ = read_line() in
@@ -336,6 +361,6 @@ let () =
   show_state_and_chat();
   update_announcements test_a ();
   update_chat test_c ();
-  update_game_state g ();
+  update_game_state 20 "Morning" alive dead ();
   new_prompt ();
 
