@@ -20,6 +20,10 @@ type game_state = {
 	announcement_history : (timestamp * announcement) list
 }
 
+(*
+ * Assign roles to players
+ * 1/4 of the players become a member of the Mafia
+ *)
 let rec assign_roles counter assigned players num_players= 
     match players with 
     [] -> assigned
@@ -90,7 +94,6 @@ let handle_message st chat_log =
         (List.map (fun x -> (Core.Time.now (),x)) chat_log)@st.chat_history; 
         announcement_history = st.announcement_history}
 
-
 (*
  * Checks if the game has ended:
  * Game ends if either - everyone is innocent or everyone is mafia
@@ -142,6 +145,12 @@ let voting_to_night st updates =
              "Its night time now - go sleep unless you have someone to visit :)")
              ::s.announcement_history}
 
+(*
+ * TODO: 1. how to collect/handle requests from clients in a timely manner? 
+ * 2. Timer for each stage? 
+ * 3. chat handling
+ * 4. resolve assumptions
+ *)
 let step_game st updates = 
     (* maybe not most fluent game play if end check is here *)
     if end_check st.players then st else 
