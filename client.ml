@@ -119,13 +119,15 @@ let _ =
         get_recent_announcements client_s |> update_announcements;
         get_recent_msgs client_s |> update_chat;
         (if client_s.game_stage = "GAME_OVER"
-        then exit 0);
+        then client_s.announcements <- "Thank you for playing mafia_of_ocaml!"::
+                                       client_s.announcements;
+             exit 0);
       else server_update_loop ()
     )
   in
   (* POST request loop *)
   let rec user_input_loop () =
-    let cmd,args = get_input () in
+    let cmd,args = get_input ~commands:["chat";"ready";"start";"vote"] () in
     send_post
       (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
       ~data:{player_id=user; player_action=cmd; arguments=[args]}
