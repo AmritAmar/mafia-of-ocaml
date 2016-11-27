@@ -118,8 +118,8 @@ let _ =
         update_client_state client_s sj;
         get_recent_announcements client_s |> update_announcements;
         get_recent_msgs client_s |> update_chat;
-        if client_s.game_stage = "GAME_OVER"
-        then exit 0;
+        (if client_s.game_stage = "GAME_OVER"
+        then exit 0);
       else server_update_loop ()
     )
   in
