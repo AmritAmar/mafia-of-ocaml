@@ -90,6 +90,15 @@ let handle_message st chat_log =
         (List.map (fun x -> (Core.Time.now (),x)) chat_log)@st.chat_history; 
         announcement_history = st.announcement_history}
 
+
+(*
+ * Checks if the game has ended:
+ * Game ends if either - everyone is innocent or everyone is mafia
+ *)
+let end_check (players : (player_name * role) list) = 
+    (List.fold_left (fun a (_,x)-> (x = Mafia) || a) false players) <>
+    (List.fold_left (fun a (_,x)-> (x = Innocent) || a) false players)
+
 (*
  * Assumes it only receives killing messages from mafias
  *)
@@ -130,11 +139,12 @@ let voting_to_night st updates =
         players = s.players; 
         chat_history = s.chat_history;
         announcement_history = (Time.now (),
-             "It's getting late. \n"^
-             "Its night time - go sleep unless you have someone to visit :)")
+             "Its night time now - go sleep unless you have someone to visit :)")
              ::s.announcement_history}
 
 let step_game st updates = 
+    (* maybe not most fluent game play if end check is here *)
+    if end_check st.players then st else 
     match st.stage with 
     Night -> night_to_disc st updates
     | Discussion -> disc_to_voting st updates
