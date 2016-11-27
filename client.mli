@@ -1,5 +1,6 @@
 open Data
 open Display
+open Client_state
 open Async.Std
 open Core.Std
 open Cohttp
@@ -25,4 +26,4 @@ val send_get : Uri.t -> (int * string) Deferred.t
  * parsed into a server_json record and passed, along with the status code,
  * into [f].
  *)
-val send_post : Uri.t -> client_json -> (int * string) Deferred.t
+val send_post : Uri.t -> ?data:client_json -> unit -> (int * string) Deferred.t
