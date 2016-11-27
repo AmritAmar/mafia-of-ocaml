@@ -19,12 +19,6 @@ type client_state = {
 val update_players : client_state -> string list -> unit
 
 (**
- * [update_msgs cs timestamp new_msgs] will update [cs] with the given timestamp
- * and list of new messages.
- *)
-val update_msgs : client_state -> string -> (string * string) list -> unit
-
-(**
  * [update_client_state cs sj] will update [cs] with the info in the given
  * server_json record.
  *)

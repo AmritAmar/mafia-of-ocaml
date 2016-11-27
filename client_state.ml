@@ -19,12 +19,12 @@ let update_players cs active =
                            @ cs.dead_players);
   cs.alive_players <- active
 
-let update_msgs cs ts new_msgs =
-  cs.timestamp <- ts;
-  cs.msgs <- new_msgs @ cs.msgs
-
 let update_client_state cs sj =
-  failwith "Unimplemented"
+  cs.day_count <- sj.day_count;
+  cs.game_stage <- sj.game_stage;
+  update_players cs sj.active_players;
+  cs.announcements <- sj.new_announcements @ cs.announcements;
+  cs.msgs <- sj.new_messages @ cs.msgs;
 
 let get_recent_announcements cs =
   failwith "Unimplemented"
