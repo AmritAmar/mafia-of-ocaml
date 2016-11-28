@@ -86,7 +86,7 @@ let _ =
     update_announcements client_s.announcements;
     let cmd,room = get_input ~commands:["join";"create"] () in
     client_s.room_id <- room;
-    add_announcements client_s ["Please enter a username that is <= 20 "
+    add_announcements client_s ["Please enter a username that is <= 15 "
                                 ^ "characters long."];
     update_announcements client_s.announcements;
     let _,user = get_input () in
@@ -96,6 +96,7 @@ let _ =
          (make_uri server_url "create_room" ~q_params:[("room_id",room)] ()) ()
     else return (200,"")
     >>= fun (code,body) ->
+    add_announcements client_s [body];
     if code <> 200 then return (code,body)
     else send_post
          (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
@@ -106,8 +107,8 @@ let _ =
   add_announcements client_s [("Your player ID is " ^ client_s.player_id);
                               ("Joined lobby for room " ^ client_s.room_id);
                              ];
-  update_announcements client_s.announcements;
   show_state_and_chat ();
+  update_announcements client_s.announcements;
   let user = client_s.player_id in
   let room = client_s.room_id in
   (* GET request loop *)
