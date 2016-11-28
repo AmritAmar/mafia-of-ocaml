@@ -23,8 +23,9 @@ let update_client_state (cs:client_state) (sj:server_json) =
   cs.day_count <- sj.day_count;
   cs.game_stage <- sj.game_stage;
   update_players cs sj.active_players;
-  cs.announcements <- sj.new_announcements @ cs.announcements;
-  cs.msgs <- sj.new_messages @ cs.msgs
+  cs.timestamp <- sj.timestamp;
+  cs.msgs <- sj.new_messages @ cs.msgs;
+  cs.announcements <- sj.new_announcements @ cs.announcements
 
 (* get top n elements of list *)
 let rec select_top n lst =
