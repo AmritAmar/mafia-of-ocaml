@@ -33,11 +33,9 @@ let rec assign_roles counter assigned players num_players=
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
  *)
-let init_state s = 
-    let j = Yojson.Basic.from_string s in
-    let p = Core.Std.List.permute (j |> member "players" |> to_list |> filter_string) in
+let init_state lst = 
     {day_count = 0; stage = Discussion;
-        players = assign_roles 0 [] p (List.length p); 
+        players = assign_roles 0 [] lst (List.length lst); 
         announcement_history = []}
 
 let kill_player p pl =
@@ -125,6 +123,12 @@ let voting_to_night st updates =
         announcement_history = (Time.now (),
              "Its night time now - go sleep unless you have someone to visit :)")
              ::s.announcement_history}
+
+let string_of_stage = function 
+    | Night -> "Night"
+    | Discussion -> "Discussion"
+    | Voting -> "Voting"
+    | Game_Over -> "Game Over"
 
 (*
  * TODO: 1. how to collect/handle requests from clients in a timely manner? 

@@ -6,6 +6,7 @@ type server_json = {
   active_players: string list;
   new_announcements: string list;
   new_messages: (string * string) list;
+  timestamp: string;
 }
 
 type client_json = {

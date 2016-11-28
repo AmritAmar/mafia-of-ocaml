@@ -20,7 +20,7 @@ type game_state = {
 
 (** [init_state] is the initial state of the game as
  * determined by JSON data object [j] *)
-val init_state : string -> game_state
+val init_state : string list -> game_state
 
 (** [handle_vote] handles players votes during Voting stage to alter the state 
   * of the game *)
@@ -41,3 +41,7 @@ val voting_to_night : game_state -> client_json list -> game_state
 (** [step_game] steps game to the next stage, returning a new state for the 
   * next stage *)
 val step_game : game_state -> client_json list -> game_state
+
+
+(** [string_of_stage] is the string that represents the given game stage. *)
+val string_of_stage : game_stage -> string 

@@ -32,3 +32,13 @@ val new_prompt : unit -> unit
  * called.
  *)
 val show_banner : unit -> unit
+
+(**
+ * Initialize user interface.
+ *)
+val init : unit -> unit
+
+(**
+ * Show state and chat area.
+ *)
+val show_state_and_chat : unit -> unit
