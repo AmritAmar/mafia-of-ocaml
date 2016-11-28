@@ -323,7 +323,7 @@ let update_game_state day game_stage alive dead =
   restore_cursor();
   ()
 
-let init =
+let init () =
   resize width height;
   erase Screen;
   print_object 62 1 [magenta] brick_wall;
@@ -332,14 +332,14 @@ let init =
   ()
 
 let show_banner () =
-  init;
+  init ();
   print_object 4 2 [yellow] scroll;
   print_object 16 10 [red] title;
   print_object 16 25 [green] authors;
   ()
 
 let show_state_and_chat () =
-  init;
+  init ();
   print_object 1 1 [yellow] game_state;
   print_object 3 14 [blue] chat_log;
   print_object 8 3 [Bold;yellow] ["DAY"];
@@ -352,10 +352,9 @@ let show_state_and_chat () =
 let new_prompt () =
   set_cursor 2 (height-1);
   erase Eol;
-  print_string [] "> ";
-  let _ = read_line() in
-  ()
+  print_string [] "> "
 
+(*
 let () =
   (* show_banner (); *)
   show_state_and_chat();
@@ -363,4 +362,4 @@ let () =
   update_chat test_c;
   update_game_state 20 "Morning" alive dead;
   new_prompt ();
-
+*)
