@@ -146,11 +146,7 @@ let can_chat state player =
     | Discussion -> is_alive player state
     | Night -> is_mafia player state
 
-let can_vote state player =
-    match state.stage with
-    | Voting -> is_alive player state
-    | Night -> is_mafia player state
-    | _ -> false
+let can_vote state player = can_chat state player
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
