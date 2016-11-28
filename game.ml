@@ -10,7 +10,6 @@ type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
-
 (** [state] is the game state of the mafia_of_ocaml game *)
 type game_state = {
 	day_count : int;
@@ -139,5 +138,4 @@ let step_game st updates =
     Night -> night_to_disc st updates
     | Discussion -> disc_to_voting st updates
     | Voting -> voting_to_night st updates
-    | Game_Over -> st
-    
+    | Game_Over -> st (* What to do in game_over? *)
