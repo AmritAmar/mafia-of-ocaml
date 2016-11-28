@@ -124,6 +124,12 @@ let voting_to_night st updates =
              "Its night time now - go sleep unless you have someone to visit :)")
              ::s.announcement_history}
 
+let string_of_stage = function 
+    | Night -> "Night"
+    | Discussion -> "Discussion"
+    | Voting -> "Voting"
+    | Game_Over -> "Game Over"
+
 (*
  * TODO: 1. how to collect/handle requests from clients in a timely manner? 
  * 2. Timer for each stage? 

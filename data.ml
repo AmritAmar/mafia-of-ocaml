@@ -54,7 +54,7 @@ let decode_sjson s =
                    |> to_list
                    |> List.map (fun n -> (member "player_id" n |> to_string,
                                           member "message" n |> to_string));
-    timestamp = member "timestamp" |> to_string;
+    timestamp = member "timestamp" j |> to_string;
   }
 
 let decode_cjson s =

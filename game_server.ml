@@ -16,13 +16,15 @@ type server_state =
    | Game of game_state  
 
 type room_data = {
-    state: server_state; 
+    state: server_state;  
     chat_buffer: (timestamp * string * string) list;
     action_buffer: (timestamp * client_json) list;
 }
 
 type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
+
+type state_info = {day_count: int; game_state: string; announcements: string list}
 
 let rooms = String.Table.create () 
 
@@ -267,8 +269,80 @@ let player_action conn req body =
 
     Body.to_string body >>= action
 
+(* ------------------------------------------------------------- *)
+
+
+let extract_days rd = 
+    match rd.state with 
+        | Lobby ls -> -1 (* no days in lobby *) 
+        | Game gs -> gs.day_count 
+
+let extract_stage rd = 
+    match rd.state with 
+        | Lobby ls -> "Lobby"
+        | Game gs -> string_of_stage gs.stage 
+
+let extract_players rd = 
+    let l_players acc (pn,_) = pn :: acc in 
+    let g_players acc (pn,role) = 
+        if role <> Dead then pn :: acc 
+                        else acc 
+    in 
+    
+    match rd.state with 
+        | Lobby ls -> List.fold ~init: [] ~f: l_players ls.players
+        | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
+
+let extract_announce rd last = 
+    let g_announce acc (posted,a) = 
+        if last > posted then a :: acc
+                        else acc 
+    in 
+    
+    match rd.state with 
+        | Lobby ls -> [] (* currently there are no announcements in the lobby *)
+        | Game gs -> List.fold ~init:[] ~f:g_announce gs.announcement_history
+
+let extract_messages rd last = 
+    let messages acc (posted,pn,msg) = 
+        if posted > last then (pn,msg)::acc
+                        else acc 
+    in 
+    List.fold ~init:[] ~f: messages rd.chat_buffer 
+
+let extract_status ab = 
+    let {id; rd; cd} = ab in 
+    let last = match cd.arguments with 
+                | [] -> raise (Action_Error (respond `Bad_request "Must specify initial timestamp"))
+                | h::_ -> Time.of_string_fix_proto `Utc h 
+    in 
+    {
+        day_count = extract_days rd;
+        game_stage = extract_stage rd; 
+        active_players = extract_players rd; 
+        new_announcements = extract_announce rd last;
+        new_messages = extract_messages rd last;
+        timestamp = Time.to_string_fix_proto `Utc (Time.now ());
+    }
+    
+let write_status sj = 
+    let response = Data.encode_sjson sj in 
+    respond `OK response
+
 let room_status conn req body = 
-    failwith "unimplemented"
+    let get_status body = 
+        try 
+            let cd = decode_cjson body in 
+            let ab = load_room req cd |> in_room in 
+            match cd.player_action with 
+                | "get_status" -> ab |> extract_status |> write_status
+                | _ -> respond `Bad_request "Invalid for this endpoint."
+        with
+            | Action_Error response -> response 
+            | _ -> respond `Bad_request "Failure."
+    in 
+
+    Body.to_string body >>= get_status
 
 let handler ~body:body conn req =
     let uri = Cohttp.Request.uri req in 
