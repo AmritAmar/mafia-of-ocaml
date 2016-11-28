@@ -140,20 +140,21 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
-let can_chat player state =
+let can_chat state player =
     match state.stage with
     | Voting | Game_Over -> false
     | Discussion -> is_alive player state
     | Night -> is_mafia player state
 
-let can_vote player state =
+let can_vote state player =
     match state.stage with
     | Voting -> is_alive player state
+    | Night -> is_mafia player state
     | _ -> false
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
-let disconnect_player player state =
+let disconnect_player state player =
     {day_count = state.day_count; stage = state.stage; 
         players = kill_player player state.players; 
         announcement_history = (Time.now (),
