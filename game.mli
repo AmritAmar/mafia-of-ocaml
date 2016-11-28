@@ -1,4 +1,3 @@
-open Core.Std
 open Data
 open Core
 
@@ -21,6 +20,22 @@ type game_state = {
 (** [init_state] is the initial state of the game as
  * determined by JSON data object [j] *)
 val init_state : string list -> game_state
+
+(** [can_chat] determines whether a player can chat in this game state
+ *)
+val can_chat : game_state -> player_name -> bool
+
+(** [can_vote] determines whether a player can vote in this game state
+ *)
+val can_vote : game_state -> player_name -> bool
+
+(** [disconnect_player] disconencts player given game state and player name
+ *)
+val disconnect_player : game_state -> player_name -> game_state
+
+(** [time_span] returns the appropriate Time.span according to given state
+ *)
+val time_span : game_state -> Core.Time.Span.t
 
 (** [handle_vote] handles players votes during Voting stage to alter the state 
   * of the game *)

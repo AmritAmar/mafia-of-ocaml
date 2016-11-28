@@ -10,7 +10,6 @@ type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
 
-
 (** [state] is the game state of the mafia_of_ocaml game *)
 type game_state = {
 	day_count : int;
@@ -86,12 +85,21 @@ let end_check (players : (player_name * role) list) =
     (List.fold_left (fun a (_,x)-> (x = Mafia) || a) false players) <>
     (List.fold_left (fun a (_,x)-> (x = Innocent) || a) false players)
 
-(*
- * Assumes it only receives killing messages from mafias
+(** returns whether or not player is a mafia
  *)
+let is_mafia player state = 
+    if List.assoc player state.players = Mafia then true else false
+
+(** returns whether or not player is alive
+ *)
+let is_alive player state =
+    if List.assoc player state.players <> Dead then true else false
+
 let night_to_disc st updates = 
-    (* would this be a list? or would only one person be killed?*)
-    let list_killed = (List.fold_left (fun a x -> x.arguments@a) [] updates) in
+    (* Only adds to list_killed if player is mafia*)
+    let list_killed = (List.fold_left 
+        (fun a x -> if (is_mafia x.player_id st) then x.arguments@a else a)
+         [] updates) in
     let updated_players = 
         List.fold_left (fun a x -> kill_player x a) st.players list_killed in
     {day_count = st.day_count+1; stage = Discussion; 
@@ -113,11 +121,13 @@ let disc_to_voting st updates =
              ::st.announcement_history}
 
 (*
- * Assumes it only receives votes during voting, and people only vote once
+ * Assumes people only vote once
  *)
 let voting_to_night st updates = 
     let s = handle_vote st 
-        (List.fold_left (fun a x -> x.arguments@a) [] updates) in
+        (List.fold_left 
+            (fun a x -> if(x.player_action = "vote") then x.arguments@a else a)
+             [] updates) in
     {day_count = s.day_count; stage = Night; 
         players = s.players; 
         announcement_history = (Time.now (),
@@ -130,11 +140,40 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
+let can_chat state player =
+    match state.stage with
+    | Discussion -> is_alive player state
+    | Night -> is_mafia player state
+    | _ -> false
+
+let can_vote state player = 
+    match state.stage with
+    | Voting -> is_alive player state
+    | Night -> is_mafia player state
+    | _ -> false
+
+(** [disconnect_player] disconencts player given game state and player name
+ *)
+let disconnect_player state player =
+    {day_count = state.day_count; stage = state.stage; 
+        players = kill_player player state.players; 
+        announcement_history = (Time.now (),
+             "Player "^player^" has disconnected.")
+             ::state.announcement_history}
+
+(** [time_span] returns the appropriate Time.span according to given state
+ *)
+let time_span state = 
+    match state.stage with
+    | Voting -> Core.Time.Span.minute
+    | Game_Over -> Core.Time.Span.second
+    | Discussion -> Core.Time.Span.minute
+    | Night -> Core.Time.Span.minute
+
 (*
  * TODO: 1. how to collect/handle requests from clients in a timely manner? 
- * 2. Timer for each stage? 
- * 3. chat handling
- * 4. resolve assumptions
+ * 2. chat handling
+ * 3. resolve assumptions
  *)
 let step_game st updates = 
     (* maybe not most fluent game play if end check is here *)
@@ -143,5 +182,4 @@ let step_game st updates =
     Night -> night_to_disc st updates
     | Discussion -> disc_to_voting st updates
     | Voting -> voting_to_night st updates
-    | Game_Over -> st
-    
+    | Game_Over -> st (* What to do in game_over? *)

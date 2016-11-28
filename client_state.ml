@@ -13,18 +13,25 @@ type client_state = {
 }
 
 let update_players cs active =
-  (if cs.alive_players <> []
-   then cs.dead_players <- (List.filter (fun x -> not (List.mem x active))
-                                        cs.alive_players)
-                           @ cs.dead_players);
+  if cs.alive_players <> []
+  then cs.dead_players <-
+            (List.filter (fun x -> not (List.mem x active)) cs.alive_players)
+            @ cs.dead_players;
   cs.alive_players <- active
 
 let update_client_state (cs:client_state) (sj:server_json) =
+  let new_gs = cs.day_count <> sj.day_count
+               || cs.game_stage <> sj.game_stage
+               || cs.alive_players <> sj.active_players
+  in
   cs.day_count <- sj.day_count;
   cs.game_stage <- sj.game_stage;
   update_players cs sj.active_players;
+  cs.timestamp <- sj.timestamp;
+  cs.msgs <- sj.new_messages @ cs.msgs;
   cs.announcements <- sj.new_announcements @ cs.announcements;
-  cs.msgs <- sj.new_messages @ cs.msgs
+  (new_gs,sj.new_messages <> [],sj.new_announcements <> [])
+
 
 (* get top n elements of list *)
 let rec select_top n lst =
