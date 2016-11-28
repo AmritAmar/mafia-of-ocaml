@@ -9,9 +9,7 @@ let test_a = ["example announcement"; "hello this is a very long announcement th
   announcement just for testing"; "this is another very long
   announcement just for testing"; "this is another very long
   announcement just for testing"; "this is another very long
-  announcement just for testing this is another very long
-  announcement just for testing this is another very long
-  announcement just for testing this is another very long
+  announcement just for testing this is another"; "this is another very long
   announcement just for testing"]
 
 let test_c = [("Clarkson","this is a really cool game");
@@ -247,7 +245,7 @@ let split_string n str =
 let rec print_object x y style endline arr =
   match arr with
   | [] -> ()
-  | h::t -> if y<>endline then (set_cursor x y;
+  | h::t -> if y<endline then (set_cursor x y;
                            print_string style h;
                            print_object x (y+1) style endline t)
             else ()
@@ -345,12 +343,12 @@ let new_prompt () =
   erase Eol;
   print_string [] "> "
 
-(*
-let () =
+
+(* let () =
   (* show_banner (); *)
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
   update_game_state 20 "Morning" alive dead;
   new_prompt ();
-*)
+ *)
