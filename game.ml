@@ -129,6 +129,30 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
+let can_chat player state =
+    match state.stage with
+    | Voting | Game_Over -> false
+    | Discussion -> true
+    | Night -> if List.assoc player state.players = Mafia then true else false
+
+(** [disconnect_player] disconencts player given game state and player name
+ *)
+let disconnect_player player state =
+    {day_count = state.day_count; stage = state.stage; 
+        players = kill_player player state.players; 
+        announcement_history = (Time.now (),
+             "Player "^player^" has disconnected.")
+             ::state.announcement_history}
+
+(** [time_span] returns the appropriate Time.span according to given state
+ *)
+let time_span state = 
+    match state.stage with
+    | Voting -> Core.Time.Span.minute
+    | Game_Over -> Core.Time.Span.second
+    | Discussion -> Core.Time.Span.minute
+    | Night -> Core.Time.Span.minute
+
 (*
  * TODO: 1. how to collect/handle requests from clients in a timely manner? 
  * 2. Timer for each stage? 
