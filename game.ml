@@ -142,11 +142,15 @@ let string_of_stage = function
 
 let can_chat state player =
     match state.stage with
-    | Voting | Game_Over -> false
     | Discussion -> is_alive player state
     | Night -> is_mafia player state
+    | _ -> false
 
-let can_vote state player = can_chat state player
+let can_vote state player = 
+    match state.stage with
+    | Voting -> is_alive player state
+    | Night -> is_mafia player state
+    | _ -> false
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
