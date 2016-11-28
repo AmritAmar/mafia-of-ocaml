@@ -116,26 +116,29 @@ let _ =
   update_announcements client_s.announcements;
   let user = client_s.player_id in
   let room = client_s.room_id in
-  (* GET request loop *)
+  (* update request loop *)
   let rec server_update_loop () =
     let get_update =
-      send_get
-        (make_uri server_url ("room_status") ~q_params:[("room_id",room);
-                                                        ("player_id",user)] ())
+      send_post
+        (make_uri server_url ("room_status") ~q_params:[("room_id",room)] ())
+        ~data:{ player_id=user;
+                player_action="get_status";
+                arguments=[client_s.timestamp] }
+        ()
     in
     upon get_update (fun (code,body) -> 
-      if code = 200 then
+      (if code = 200 then
         let sj = decode_sjson body in
         update_client_state client_s sj;
         update_announcements client_s.announcements;
         update_chat client_s.msgs;
         (if client_s.game_stage = "GAME_OVER"
         then add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
-             exit 0);
-      else server_update_loop ()
+             exit 0));
+      server_update_loop ()
     )
   in
-  (* POST request loop *)
+  (* command loop *)
   let rec user_input_loop () =
     let cmd,args = get_input ~commands:["chat";"ready";"start";"vote"] () in
     send_post
