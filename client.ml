@@ -38,6 +38,9 @@ let send_post uri ?data () =
   upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
   Ivar.read new_ivar
 
+let rec is_in n = function
+  | []   -> false
+  | h::t -> if h = n then true else is_in n t
 
 let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
@@ -65,7 +68,7 @@ let rec get_input_async f =
                               | h::t::[] -> (String.lowercase h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (List.mem ["chat"; "ready"; "start"; "vote"] first_word )
+        if (is_in first_word ["chat"; "ready"; "start"; "vote"])
         then f (first_word,rest)
         else get_input_async f
 
@@ -165,12 +168,18 @@ let _ =
       upon get_update (fun (code,body) -> 
         (if code = 200 then
           let sj = decode_sjson body in
-          update_client_state client_s sj;
-          update_announcements client_s.announcements;
-          update_chat client_s.msgs;
+          let (new_state,new_msgs,new_a) = update_client_state client_s sj in
+          if new_state then update_game_state client_s.day_count
+                                              client_s.game_stage
+                                              client_s.alive_players
+                                              client_s.dead_players;
+          if new_msgs then update_chat client_s.msgs;
+          if new_a then update_announcements client_s.announcements;
           if client_s.game_stage = "GAME_OVER"
-          then (add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
-               Pervasives.exit 0));
+          then
+            (add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
+             update_announcements client_s.announcements;
+             Pervasives.exit 0));
         server_update_loop ()
       )
     in
