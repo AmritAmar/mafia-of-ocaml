@@ -237,7 +237,13 @@ let write_game ab =
  * game_state. Returns Action_Error otherwise *)
 
 let can_vote ab = 
-    failwith "unimplemented"
+    let {id; rd; cd} = ab in 
+    match rd.state with 
+        | Lobby ls -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby.")) 
+        | Game gs ->
+            if Game.can_vote gs id then ab 
+            else 
+                raise (Action_Error (respond `Bad_request ("Cannot vote during " ^ (string_of_stage gs.stage))))
 
 (* [write_vote ab] adds the vote specified within the client data of the action buffer 
  * to the room's action_queue. Requires that the room is in game mode. *)
