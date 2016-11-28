@@ -90,6 +90,10 @@ let end_check (players : (player_name * role) list) =
 let is_mafia player state = 
     if List.assoc player state.players = Mafia then true else false
 
+(** returns whether or not player is alive
+ *)
+let is_alive player state =
+    if List.assoc player state.players <> Dead then true else false
 
 let night_to_disc st updates = 
     (* Only adds to list_killed if player is mafia*)
@@ -136,13 +140,16 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
-
-
 let can_chat player state =
     match state.stage with
     | Voting | Game_Over -> false
-    | Discussion -> true
+    | Discussion -> is_alive player state
     | Night -> is_mafia player state
+
+let can_vote player state =
+    match state.stage with
+    | Voting -> is_alive player state
+    | _ -> false
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
@@ -174,5 +181,4 @@ let step_game st updates =
     Night -> night_to_disc st updates
     | Discussion -> disc_to_voting st updates
     | Voting -> voting_to_night st updates
-
     | Game_Over -> st (* What to do in game_over? *)

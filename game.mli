@@ -25,6 +25,10 @@ val init_state : string list -> game_state
  *)
 val can_chat : player_name -> game_state -> bool
 
+(** [can_vote] determines whether a player can vote in this game state
+ *)
+val can_vote : player_name -> game_state -> bool
+
 (** [disconnect_player] disconencts player given game state and player name
  *)
 val disconnect_player : player_name -> game_state -> game_state
