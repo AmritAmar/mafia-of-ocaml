@@ -4,8 +4,12 @@ let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
 let alive = [ "Clarkson" ; "Myers" ]
 
-let test_a = ["hello this is a very long announcement that
+let test_a = ["example announcement"; "hello this is a very long announcement that
   I really had to announce"; "this is another very long
+  announcement just for testing"; "this is another very long
+  announcement just for testing"; "this is another very long
+  announcement just for testing"; "this is another very long
+  announcement just for testing this is another"; "this is another very long
   announcement just for testing"]
 
 let test_c = [("Clarkson","this is a really cool game");
@@ -192,32 +196,24 @@ let paper = [
 "|_____________________________|"]
 
 
-let width = 100
+let screen_width = 100
 
-let height = 40
+let screen_height = 41
 
-
-(* let s2 x y style n str =
-  set_cursor x y;
-  let words = Str.split (Str.regexp "[ \t]+") str in
-  let word_list =
-    match words with
-    | [] -> []
-    | h::t -> t in
-  let accumulator =
-    match words with
-    | [] -> ""
-    | h::t -> h in
-  let rec helper w acc x y =
-    match w with
-    | [] -> set_cursor x y; print_string style acc
-    | h::t -> if (String.length h) + (String.length acc) >= n
-                then (set_cursor x y; print_string style (acc^"\n"); helper t h x (y+1))
-              else helper t (acc^" "^h) x y
-  in helper word_list accumulator x y *)
-
+(* let split_word w n acc =
+  match w, n, acc with
+  | "",0,"" -> failwith "Invalid"
+  | "",0,s -> failwith "Invalid"
+  | s,0,"" -> failwith "Invalid"
+  | s1,0,s2 -> failwith "Invalid"
+  | "",n,"" -> failwith "Invalid"
+  | "",n,s -> failwith "Invalid"
+  | s, n, "" -> (String.sub s 0 (n-1),String.sub s (n-1) (String.length s-2))
+  | s1, n, s2 -> (String.sub s1 0 (n-(String.length s2)-1),String.sub s1 (n-(String.length s2)-1) (String.length s1-2))
+ *)
 (* [split_string n str] inputs a string [str] and splits it into a list of
- * strings that are at most [n] characters long
+ * strings that are at most [n] characters long where n > 0.
+ * precondition: n > 0
 *)
 let split_string n str =
   let word_list = Str.split (Str.regexp "[ \t\n]+") str in
@@ -235,43 +231,55 @@ let split_string n str =
   let rec helper w acc l =
     match w with
     | [] -> l@[acc]
-    | h::t -> (* if String.length h >=n && h<>acc then
-      let front = (String.sub h 0 (n-String.length acc-1)) in
-      let back = (String.sub h (n-String.length acc-1) (String.length h-2)) in
-      helper (back::t) back (l@[acc^front])
-              else if String.length h >=n && h=acc then
-      let front = (String.sub h 0 (n-String.length acc-1)) in
-      let back = (String.sub h (n-String.length acc-1) (String.length h-2)) in
-      helper (back::t) back (l@[acc^front])
+    | h::t -> (* if String.length h >=n then
+      let split = split_word h n acc in
+      helper ((snd split)::t) "" (l@[acc^" "^(fst split)])
               else  *)if (String.length h) + (String.length acc) >= n
                 then helper t h (l@[acc])
               else helper t (acc^" "^h) l
   in helper w acc []
 
-(* [print_object x y style arr] prints a list of strings [arr] at coordinates
- * [x],[y] in the style of [style]
+(* [print_object x y style endline arr] prints a list of strings [arr] at coord
+ * [x],[y] in the style of [style]. If it reaches [endline] it stops printing.
 *)
-let rec print_object x y style arr =
+let rec print_object x y style endline arr =
   match arr with
   | [] -> ()
-  | h::t -> set_cursor x y;
-            print_string style h;
-            print_object x (y+1) style t
+  | h::t -> if y<endline then (set_cursor x y;
+                           print_string style h;
+                           print_object x (y+1) style endline t)
+            else ()
 
-(* [print_list x y style n lst skip] takes in a list of strings, breaks each
- * string into a list of strings of a certain length, and prints them with at
- * coordinates [x],[y] with style [style] and [skip] number of breaks.
+
+(* [print_list x y style endline n lst skip] takes in a list of strings, breaks
+ * each string into a list of strings of a certain length, and prints them with
+ * at coordinates [x],[y] with style [style] and [skip] number of breaks. If it
+ * reaches [endline] it stops printing.
 *)
-let rec print_list x y style n lst skip =
+let rec print_list x y style endline n lst skip =
   match lst with
   | [] -> ()
   | h::t -> let len = List.length (split_string n h) in
-            print_object x y style (split_string n h);
-            print_list x (y+len+skip) style n t skip
+            print_object x y style endline (split_string n h);
+            print_list x (y+len+skip) style endline n t skip
 
-let update_announcements a () =
+(* [erase_box x y width height] erases everything on the screen at coordinates
+ * [x],[y] spanning [width] and [height].
+*)
+let erase_box x y width height =
+  let spaces = String.make width ' ' in
+  let lst = let rec fill h =
+              match h with
+              | 0 -> []
+              | n -> spaces::(fill (n-1))
+            in fill height in
+  print_object x y [] screen_height lst;
+  ()
+
+let update_announcements a =
   save_cursor();
-  print_list 68 8 [cyan] 25 a 2;
+  erase_box 68 8 25 27;
+  print_list 68 8 [cyan] 35 25 a 2;
   restore_cursor();
   ()
 
@@ -285,57 +293,62 @@ let rec snd_lst lst =
   | [] -> []
   | h::t -> (snd h)::(snd_lst t)
 
-let update_chat c () =
+let update_chat log =
   save_cursor();
-  print_list 8 17 [cyan] 15 (fst_lst c) 1;
-  print_list 17 17 [yellow] 40 (snd_lst c) 1;
+  erase_box 8 17 47 20;
+  print_list 8 17 [cyan] 37 15 (fst_lst log) 1;
+  print_list 17 17 [yellow] 37 40 (snd_lst log) 1;
   restore_cursor();
   ()
 
-let update_game_state gs () =
+let update_game_state day game_stage alive dead =
   save_cursor();
-  print_list 8 5 [green] 20 gs.alive_players 0;
-  print_list 33 5 [red] 20 gs.dead_players 0;
+  erase_box 12 3 4 1;
+  erase_box 8 5 46 7;
+  print_object 12 3 [blue] 12 [string_of_int day];
+  print_object 8 5 [magenta] 12 [game_stage];
+  print_list 21 5 [green] 12 20 alive 0;
+  print_list 38 5 [red] 12 20 dead 0;
   restore_cursor();
   ()
 
 let init () =
-  resize width height;
+  resize screen_width screen_height;
   erase Screen;
-  print_object 62 1 [magenta] brick_wall;
-  print_object 65 4 [] paper;
-  print_object 73 6 [Bold;black;on_white] [" ANNOUNCEMENTS "];
+  print_object 62 1 [magenta] screen_height brick_wall;
+  print_object 65 4 [] screen_height paper;
+  print_object 73 6 [Bold;black;on_white] screen_height [" ANNOUNCEMENTS "];
   ()
 
 let show_banner () =
-  init();
-  print_object 4 2 [yellow] scroll;
-  print_object 16 10 [red] title;
-  print_object 16 25 [green] authors;
+  init ();
+  print_object 4 2 [yellow] screen_height scroll;
+  print_object 16 10 [red] screen_height title;
+  print_object 16 25 [green] screen_height authors;
   ()
 
 let show_state_and_chat () =
-  init();
-  print_object 1 1 [yellow] game_state;
-  print_object 3 14 [blue] chat_log;
-  print_object 8 3 [Bold;yellow] ["ALIVE"];
-  print_object 33 3 [Bold;yellow] ["DEAD"];
-  print_object 40 15 [Bold;white;on_blue] [" CHAT LOG "];
+  init ();
+  print_object 1 1 [yellow] screen_height game_state;
+  print_object 3 14 [blue] screen_height chat_log;
+  print_object 8 3 [Bold;yellow] screen_height ["DAY"];
+  print_object 21 3 [Bold;yellow] screen_height ["ALIVE"];
+  print_object 38 3 [Bold;yellow] screen_height ["DEAD"];
+  print_object 40 15 [Bold;white;on_blue] screen_height [" CHAT LOG "];
   ()
 
 
 let new_prompt () =
-  set_cursor 2 height;
+  set_cursor 2 (screen_height-1);
   erase Eol;
-  print_string [] "> ";
-  let _ = read_line() in
-  ()
+  print_string [] "> "
 
-let () =
-  show_banner ();
+
+(* let () =
+  (* show_banner (); *)
   show_state_and_chat();
-  update_announcements test_a ();
-  update_chat test_c ();
-  update_game_state g ();
+  update_announcements test_a;
+  update_chat test_c;
+  update_game_state 20 "Morning" alive dead;
   new_prompt ();
-
+ *)
