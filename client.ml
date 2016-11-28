@@ -38,6 +38,9 @@ let send_post uri ?data () =
   upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
   Ivar.read new_ivar
 
+let rec is_in n = function
+  | []   -> false
+  | h::t -> if h = n then true else is_in n t
 
 let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
@@ -65,7 +68,7 @@ let rec get_input_async f =
                               | h::t::[] -> (String.lowercase h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (List.mem ["chat"; "ready"; "start"; "vote"] first_word )
+        if (is_in first_word ["chat"; "ready"; "start"; "vote"])
         then f (first_word,rest)
         else get_input_async f
 
