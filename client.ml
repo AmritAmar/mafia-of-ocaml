@@ -46,7 +46,7 @@ let _ =
                    dead_players=[];
                    timestamp="";
                    msgs=[];
-                   announcements=[]; }
+                   announcements=["Welcome to mafia_of_ocaml!"]; }
   in
   let rec get_input ?(commands=[]) () =
     new_prompt ();
@@ -76,16 +76,11 @@ let _ =
                          exit 0)
                    else Sys.argv.(1)
   in
-  let server_url = (if String.sub server_url ~pos:0 ~len:7 = "http://"
-                    then "" else "http://")
-                    ^ server_url
-  in
   upon (
   init ();
   show_banner ();
   server_verify (fun () ->
-    add_announcements client_s ["Welcome to mafia_of_ocaml!";
-                                "Type \"join [room_id]\" to join an existing "
+    add_announcements client_s ["Type \"join [room_id]\" to join an existing "
                                 ^ "room or \"create [room_id]\" to create a "
                                 ^ "new room."];
     update_announcements client_s.announcements;
@@ -112,6 +107,7 @@ let _ =
                               ("Joined lobby for room " ^ client_s.room_id);
                              ];
   update_announcements client_s.announcements;
+  show_state_and_chat ();
   let user = client_s.player_id in
   let room = client_s.room_id in
   (* GET request loop *)
