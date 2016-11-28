@@ -79,7 +79,7 @@ let create_room conn req body =
 let join_room conn req body = 
     let add_player s l =  
         let in_use = List.fold ~init:false ~f:(fun acc (n,_) -> (n = s) || acc) l.players in 
-        let too_long = String.length s >= 20 in 
+        let too_long = String.length s >= 15 in 
 
         if (in_use || too_long) then None 
         else if l.players = [] then 
@@ -102,7 +102,7 @@ let join_room conn req body =
                             respond `Bad_request  "player_id in use."
                         | Some l' ->
                             Hashtbl.replace rooms id {rd with state = Lobby l'}; 
-                            respond `OK "Joined!")  
+                            respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
         with _ -> respond `Bad_request "Malformed client_action.json"
@@ -271,7 +271,6 @@ let player_action conn req body =
 
 (* ------------------------------------------------------------- *)
 
-
 let extract_days rd = 
     match rd.state with 
         | Lobby ls -> -1 (* no days in lobby *) 
@@ -344,6 +343,11 @@ let room_status conn req body =
 
     Body.to_string body >>= get_status
 
+(* ------------------------------------------------------------- *)
+(* Daemons *)
+
+
+(* ------------------------------------------------------------- *)
 let handler ~body:body conn req =
     let uri = Cohttp.Request.uri req in 
     let verb = Cohttp.Request.meth req in 
@@ -351,7 +355,7 @@ let handler ~body:body conn req =
         | "/create_room", `POST -> create_room conn req body
         | "/join_room", `POST ->  join_room conn req body 
         | "/player_action", `POST -> player_action conn req body
-        | "/room_status", `GET -> room_status conn req body 
+        | "/room_status", `POST -> room_status conn req body 
         | _ , _ ->
             respond`Not_found "Invalid Route."
 
