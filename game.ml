@@ -40,11 +40,12 @@ let init_state lst =
 let kill_player p pl =
     List.map (fun (x,y) -> if x=p then (x,Dead) else (x,y)) pl
 
+
 (*
  * Executes player that at least half of the players
  * vote on
  *)
-let handle_vote (st:game_state) (players:player_name list)  =
+let handle_exec_vote (st:game_state) (players:player_name list)  =
     let p = List.sort String.compare players in 
     let rec voting (player:string) (acc:int) (pl: player_name list) = (
         match pl with
@@ -95,18 +96,39 @@ let is_mafia player state =
 let is_alive player state =
     if List.assoc player state.players <> Dead then true else false
 
+
+(**
+ * Gets latest votes given a list of votes
+ *)
+let rec latest_votes latest votes = 
+    match votes with
+    [] -> latest
+    | hd::tl -> let new_list = List.filter 
+            (fun x -> x.player_id <> hd.player_id) latest in
+        latest_votes (hd::new_list) tl
+
+(**
+ * Returns the most voted person *)
+let rec most_voted max_num curr_num max_vote votes = 
+    match votes with 
+    [] -> max_vote
+    | hd::tl -> if hd = max_vote then most_voted (max_num+1) (curr_num+1) max_vote tl
+        else if curr_num = max_num then most_voted (curr_num+1) (curr_num+1) hd tl
+        else most_voted max_num (curr_num+1) max_vote tl
+
 let night_to_disc st updates = 
     (* Only adds to list_killed if player is mafia*)
-    let list_killed = (List.fold_left 
-        (fun a x -> if (is_mafia x.player_id st) then x.arguments@a else a)
-         [] updates) in
-    let updated_players = 
-        List.fold_left (fun a x -> kill_player x a) st.players list_killed in
+    let victim = List.fold_left 
+            (fun a x -> if(is_mafia x.player_id st && x.player_action = "vote")
+             then x::a else a)
+            [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
+            |> List.concat |> List.sort String.compare |> most_voted 0 0 "" in
+    let updated_players = kill_player victim st.players in
     {day_count = st.day_count+1; stage = Discussion; 
         players = updated_players; 
         announcement_history = (Time.now (),
-             "Good Morning! Last night,"^(String.concat ", " list_killed)^
-             "were killed in their sleep by the Mafia :( RIP.")
+             "Good Morning! Last night, "^victim^
+             " was killed in their sleep by the Mafia :( RIP.")
              ::st.announcement_history}
 
 (*
@@ -121,13 +143,14 @@ let disc_to_voting st updates =
              ::st.announcement_history}
 
 (*
- * Assumes people only vote once
+ * Latest votes are taken account, each player's votes only count once
  *)
 let voting_to_night st updates = 
-    let s = handle_vote st 
-        (List.fold_left 
-            (fun a x -> if(x.player_action = "vote") then x.arguments@a else a)
-             [] updates) in
+    let s = List.fold_left 
+            (fun a x -> if(x.player_action = "vote") then x::a else a)
+            [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
+            |> List.concat |> handle_exec_vote st 
+         in
     {day_count = s.day_count; stage = Night; 
         players = s.players; 
         announcement_history = (Time.now (),

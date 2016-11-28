@@ -37,9 +37,9 @@ val disconnect_player : game_state -> player_name -> game_state
  *)
 val time_span : game_state -> Core.Time.Span.t
 
-(** [handle_vote] handles players votes during Voting stage to alter the state 
-  * of the game *)
-val handle_vote : game_state -> player_name list -> game_state
+(** [handle_exec_vote] handles players execution votes during Voting stage to alter
+ * the state of the game *)
+val handle_exec_vote : game_state -> player_name list -> game_state
 
 (** [night_to_disc] processes game state changes when going from night stage 
   * to discussion stage*)
