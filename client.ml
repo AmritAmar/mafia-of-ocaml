@@ -92,16 +92,21 @@ let _ =
     let _,user = get_input () in
     client_s.player_id <- user;
     if cmd = "create"
-    then send_post
+    then (send_post
          (make_uri server_url "create_room" ~q_params:[("room_id",room)] ()) ()
-    else return (200,"")
-    >>= fun (code,body) ->
-    add_announcements client_s [body];
-    if code <> 200 then return (code,body)
-    else send_post
+         >>= fun (code,body) -> 
+         if code <> 200
+         then (add_announcements client_s [body];
+              update_announcements client_s.announcements;
+              return (code,body))
+         else (send_post
+              (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
+              ~data:{player_id=user; player_action="join"; arguments=[]}
+              ()))
+    else (send_post
          (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
          ~data:{player_id=user; player_action="join"; arguments=[]}
-         ()
+         ())
   ) >>= fun (_, body) ->
   client_s.timestamp <- body; (* initial timestamp *)
   add_announcements client_s [("Your player ID is " ^ client_s.player_id);
