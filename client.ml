@@ -9,6 +9,9 @@ open Cohttp_async
 
 (* Case insensitive equals *)
 let (+=+) s1 s2 = (String.lowercase s1) = (String.lowercase s2)
+
+(* Add announcements to client_state *)
+let add_announcements cs a = cs.announcements <- a @ cs.announcements
   
 let make_uri base_url path ?(q_params=[]) () =
   let new_uri = Uri.of_string base_url in
@@ -78,15 +81,19 @@ let _ =
                     ^ server_url
   in
   upon (
+  init ();
+  show_banner ();
   server_verify (fun () ->
-    (*update_announcements*)
-    Printf.printf "%s\n" ("Welcome to mafia_of_ocaml! "
-                          ^ "Type \"join [room_id]\" to join an existing room or "
-                          ^ "\"create [room_id]\" to create a new room.");
+    add_announcements client_s ["Welcome to mafia_of_ocaml!";
+                                "Type \"join [room_id]\" to join an existing "
+                                ^ "room or \"create [room_id]\" to create a "
+                                ^ "new room."];
+    update_announcements client_s.announcements;
     let cmd,room = get_input ~commands:["join";"create"] () in
     client_s.room_id <- room;
-    (*update_announcements*)
-    Printf.printf "%s\n" ("Please enter a username that is <= 20 characters long.");
+    add_announcements client_s ["Please enter a username that is <= 20 "
+                                ^ "characters long."];
+    update_announcements client_s.announcements;
     let _,user = get_input () in
     client_s.player_id <- user;
     if cmd = "create"
@@ -100,9 +107,11 @@ let _ =
          ~data:{player_id=user; player_action="join"; arguments=[]}
          ()
   ) >>= fun (_, body) ->
-  print_endline body;
-  print_endline ("player_id: " ^ client_s.player_id);
-  print_endline ("Joined lobby for room " ^ client_s.room_id);
+  client_s.timestamp <- body; (* initial timestamp *)
+  add_announcements client_s [("Your player ID is " ^ client_s.player_id);
+                              ("Joined lobby for room " ^ client_s.room_id);
+                             ];
+  update_announcements client_s.announcements;
   let user = client_s.player_id in
   let room = client_s.room_id in
   (* GET request loop *)
@@ -116,11 +125,10 @@ let _ =
       if code = 200 then
         let sj = decode_sjson body in
         update_client_state client_s sj;
-        get_recent_announcements client_s |> update_announcements;
-        get_recent_msgs client_s |> update_chat;
+        update_announcements client_s.announcements;
+        update_chat client_s.msgs;
         (if client_s.game_stage = "GAME_OVER"
-        then client_s.announcements <- "Thank you for playing mafia_of_ocaml!"::
-                                       client_s.announcements;
+        then add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
              exit 0);
       else server_update_loop ()
     )
@@ -133,8 +141,8 @@ let _ =
       ~data:{player_id=user; player_action=cmd; arguments=[args]}
       ()
     >>= fun (code,body) ->
-    (*update_announcements*)
-    print_endline body;
+    add_announcements client_s [body];
+    update_announcements client_s.announcements;
     user_input_loop ()
   in
   server_update_loop ();
