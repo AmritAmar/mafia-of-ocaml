@@ -85,12 +85,17 @@ let end_check (players : (player_name * role) list) =
     (List.fold_left (fun a (_,x)-> (x = Mafia) || a) false players) <>
     (List.fold_left (fun a (_,x)-> (x = Innocent) || a) false players)
 
-(*
- * Assumes it only receives killing messages from mafias
+(** returns whether or not player is a mafia
  *)
+let is_mafia player state = 
+    if List.assoc player state.players = Mafia then true else false
+
+
 let night_to_disc st updates = 
-    (* would this be a list? or would only one person be killed?*)
-    let list_killed = (List.fold_left (fun a x -> x.arguments@a) [] updates) in
+    (* Only adds to list_killed if player is mafia*)
+    let list_killed = (List.fold_left 
+        (fun a x -> if (is_mafia x.player_id st) then x.arguments@a else a)
+         [] updates) in
     let updated_players = 
         List.fold_left (fun a x -> kill_player x a) st.players list_killed in
     {day_count = st.day_count+1; stage = Discussion; 
@@ -112,11 +117,13 @@ let disc_to_voting st updates =
              ::st.announcement_history}
 
 (*
- * Assumes it only receives votes during voting, and people only vote once
+ * Assumes people only vote once
  *)
 let voting_to_night st updates = 
     let s = handle_vote st 
-        (List.fold_left (fun a x -> x.arguments@a) [] updates) in
+        (List.fold_left 
+            (fun a x -> if(x.player_action = "vote") then x.arguments@a else a)
+             [] updates) in
     {day_count = s.day_count; stage = Night; 
         players = s.players; 
         announcement_history = (Time.now (),
@@ -129,11 +136,13 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
+
+
 let can_chat player state =
     match state.stage with
     | Voting | Game_Over -> false
     | Discussion -> true
-    | Night -> if List.assoc player state.players = Mafia then true else false
+    | Night -> is_mafia player state
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
@@ -155,9 +164,8 @@ let time_span state =
 
 (*
  * TODO: 1. how to collect/handle requests from clients in a timely manner? 
- * 2. Timer for each stage? 
- * 3. chat handling
- * 4. resolve assumptions
+ * 2. chat handling
+ * 3. resolve assumptions
  *)
 let step_game st updates = 
     (* maybe not most fluent game play if end check is here *)
