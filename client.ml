@@ -165,12 +165,18 @@ let _ =
       upon get_update (fun (code,body) -> 
         (if code = 200 then
           let sj = decode_sjson body in
-          update_client_state client_s sj;
-          update_announcements client_s.announcements;
-          update_chat client_s.msgs;
+          let (new_state,new_msgs,new_a) = update_client_state client_s sj in
+          if new_state then update_game_state client_s.day_count
+                                              client_s.game_stage
+                                              client_s.alive_players
+                                              client_s.dead_players;
+          if new_msgs then update_chat client_s.msgs;
+          if new_a then update_announcements client_s.announcements;
           if client_s.game_stage = "GAME_OVER"
-          then (add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
-               Pervasives.exit 0));
+          then
+            (add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
+             update_announcements client_s.announcements;
+             Pervasives.exit 0));
         server_update_loop ()
       )
     in

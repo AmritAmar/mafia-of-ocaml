@@ -20,9 +20,12 @@ val update_players : client_state -> string list -> unit
 
 (**
  * [update_client_state cs sj] will update [cs] with the info in the given
- * server_json record.
+ * server_json record and return a tuple [(new_gs,new_msgs,new_a)], where
+ * [new_gs] is whether day_count, game_stage, alive_players, or dead_players
+ * has been updated, [new_msgs] is whether msgs has been updated, and [new_a]
+ * is whether announcements has been updated.
  *)
-val update_client_state : client_state -> server_json -> unit
+val update_client_state : client_state -> server_json -> (bool * bool * bool)
 
 (**
  * [get_recent_announcements cs] will return the most recent announcements in
