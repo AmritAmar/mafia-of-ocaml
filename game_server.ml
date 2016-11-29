@@ -4,7 +4,6 @@ open Cohttp_async
 
 open Data 
 open Game 
-open Ringbuffer
 
 type lobby_state = {
     admin : string;
@@ -17,6 +16,7 @@ type server_state =
 
 type room_data = {
     state: server_state;  
+    transition_at: timestamp option; 
     last_updated: (string * timestamp) list;  
     chat_buffer: (timestamp * string * string) list;
     action_buffer: (timestamp * client_json) list;
@@ -24,8 +24,6 @@ type room_data = {
 
 type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
-
-type state_info = {day_count: int; game_state: string; announcements: string list}
 
 let rooms = String.Table.create () 
 
@@ -46,11 +44,10 @@ let extract_id req =
 (* Daemons *)
 
 let timeout = Time.Span.of_sec 5.0
-(*let timeout = Time.Span.of_min 0.5 *)
 
 let lobby_disconnect ls inactive = 
     let is_active (pn,_) = not (List.mem inactive pn) in 
-    let active = List.filter ls.players is_active in 
+    let active = List.filter ls.players ~f:is_active in 
     match active with 
         | [] -> failwith "rep not ok"
         | (pn,_)::t -> if List.mem inactive ls.admin 
@@ -65,26 +62,30 @@ let close_room id =
     Hashtbl.remove rooms id; 
     () 
 
-let rec heart_beat id last = 
-    eprintf "Checking heartbeat!\n"; 
-    if not (Hashtbl.mem rooms id) then () (* kill daemon *) else
-    
+let heart_beat id now = 
+    eprintf "Checking heartbeat... (%s) \n" id; 
     let rd = Hashtbl.find_exn rooms id in 
-    let now = Time.now () in 
 
     let p_disconnect players = 
-        let is_healthy (pn,t) = Time.diff now t >= timeout in 
-        let collect_inactive acc (pn,t) =
-            if is_healthy (pn,t) then acc 
-                                 else pn :: acc 
+        let is_healthy (pn,t) = 
+            let diff = Time.diff now t in 
+            eprintf "\t%s, Difference: %s, Healthy?: %s\n" 
+                        (pn) 
+                        (Time.Span.to_short_string diff) 
+                        (if (diff <= timeout) then "true" else "false");
+            diff <= timeout 
         in 
 
-        let active = List.filter players ~f:is_healthy in 
-        let inactive = List.fold ~init:[] ~f:(collect_inactive) players in
-        (active,inactive)
+        let collect_activity (active,inactive) (pn,t) =
+            if is_healthy (pn,t) then ((pn,t) :: active, inactive) 
+                                 else (active, pn :: inactive)
+        in 
+
+        List.fold ~init:([],[]) ~f:collect_activity players 
     in
 
     let (active,inactive) = p_disconnect rd.last_updated in
+    eprintf "Active: %n, Inactive: %n\n" (List.length active) (List.length inactive); 
 
     if active = [] then close_room id (* everyone is gone, close the room *)
     else 
@@ -95,9 +96,76 @@ let rec heart_beat id last =
             | Game gs -> Game (game_disconnect gs inactive) 
     in 
 
-    Hashtbl.set rooms id {rd with state = state'; last_updated = active}; 
-    upon (after (timeout)) (fun _ -> heart_beat id now);
-    () 
+    Hashtbl.set rooms ~key:id ~data:{rd with state = state'; last_updated = active}; 
+    ()
+
+let lobby_transition ls now = 
+    let players = List.fold ~init:[] ~f:(fun acc (pn,_) -> pn :: acc) ls.players in 
+    let gs' = Game.init_state players in
+    let t' = Time.add now (Game.time_span gs') in 
+    (Game gs', Some t')
+
+let end_game (gs : game_state) = 
+    let ply = List.rev (gs.players) in 
+    let admin' = match ply with 
+                    | [] -> raise (Invalid_argument "room empty")
+                    | (pn,_)::t -> pn
+    in 
+
+    let grab_players acc (pn,_) = 
+        if pn = admin' then (pn,true)::acc
+                       else (pn,false)::acc 
+    in 
+
+    let players' = List.fold ~init:[] ~f:grab_players ply in 
+    (Lobby {admin = admin'; players = players'}, None)
+
+let game_transition rd gs now = 
+    if gs.stage = Game_Over then (end_game gs) else 
+
+    (* so... not really. This is close but not the real start time *
+      TODO: should we cache the real start time? *)
+    let start = Time.sub now (Game.time_span gs) in 
+
+    let collect_updates acc (t,cj) = 
+        if t >= start then cj :: acc
+                      else acc 
+    in 
+
+    (* TODO: verify if these are sorted are not *)
+    let updates = List.fold ~init:[] ~f:collect_updates rd.action_buffer in 
+    let gs' = Game.step_game gs updates in 
+    let t' = Time.add now (Game.time_span gs') in 
+    (Game gs', Some t')
+
+let transition rd now = 
+    match rd.state with 
+        | Lobby ls -> lobby_transition ls now
+        | Game gs -> game_transition rd gs now
+
+let transition_beat id now = 
+    let rd = Hashtbl.find_exn rooms id in 
+    match rd.transition_at with 
+        | None -> ()
+        | Some t when t > now -> () 
+        | Some t -> 
+            try 
+                let (st',time) = transition rd now in 
+                Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = time};
+                ()
+            with 
+                _ -> close_room id; ()
+    
+let server_beat _ = 
+    let now = Time.now () in 
+    eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
+    List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now); (*check heart_beat*)
+    List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
+    ()
+
+let daemon_action conn req body = 
+    server_beat ();
+    respond `OK "Done."
 
 (* room creation logic *)
 (* TODO: Rewrite Using Exceptions *)
@@ -127,12 +195,12 @@ let create_room conn req body =
         | Some s -> 
             let room = {
                 state = Lobby {admin = ""; players = []};
+                transition_at = None; 
                 last_updated = []; 
                 chat_buffer = [];
                 action_buffer = []; 
             } in 
-            Hashtbl.replace rooms s room; 
-            Clock.run_after timeout (fun _ -> heart_beat s (Time.now ())) (); 
+            Hashtbl.set rooms ~key:s ~data:room; 
             eprintf "Room Created! (%s)\n" s; 
             Server.respond_with_string  ~code:`OK "Room created."
 
@@ -144,7 +212,7 @@ let join_room conn req body =
 
         if (in_use || too_long) then None 
         else if l.players = [] then 
-            Some {l with admin = s; players = [(s,true)]}
+            Some {admin = s; players = [(s,true)]}
         else 
             Some {l with players = (s,false)::l.players}
     in 
@@ -162,7 +230,13 @@ let join_room conn req body =
                         | None -> 
                             respond `Bad_request  "player_id in use."
                         | Some l' ->
-                            Hashtbl.replace rooms id {rd with state = Lobby l'}; 
+                            let time = Time.now () in 
+                            let room = {rd with  
+                                        state = Lobby l';
+                                        last_updated = (cd.player_id, time) :: rd.last_updated 
+                                       } in 
+                            Hashtbl.set rooms ~key:id ~data:room; 
+                            eprintf "%s has joined room (%s)\n" cd.player_id id;
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
@@ -228,7 +302,7 @@ let write_chat {id; rd; cd} =
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
     let addition = ((Time.now ()), pn, msg) in 
-    Hashtbl.set rooms id {rd with chat_buffer = (addition :: rd.chat_buffer)};
+    Hashtbl.set rooms ~key:id ~data:{rd with chat_buffer = (addition :: rd.chat_buffer)};
     respond `OK "Done."
 
 (* [write_ready ab] toggles the player's ready state given the client_data and 
@@ -245,7 +319,7 @@ let write_ready {id; rd; cd} =
         | Game _ -> raise (Action_Error (respond`Bad_request "Cannot Ready in Game."))
         | Lobby ls ->
             let pl' = List.fold ~init:[] ~f:update_players ls.players in 
-            Hashtbl.set rooms id {rd with state = Lobby {ls with players = pl'}}; 
+            Hashtbl.set rooms ~key:id ~data:{rd with state = Lobby {ls with players = pl'}}; 
             respond `OK "Done."
 
 (* [is_admin ab] is [ab] if the palyer specified within the action_bundle is an 
@@ -285,10 +359,9 @@ let write_game ab =
     match rd.state with 
         | Game _ -> raise (Action_Error (respond`Bad_request "Game already in progress"))
         | Lobby ls ->
-            let players = List.fold ~init:[] ~f:(fun acc (pn,_) -> pn :: acc) ls.players in 
-            let gs = Game.init_state players in
-            Hashtbl.set rooms id {rd with state = Game gs}; 
-            respond `OK "Done."
+           let (st', t') = lobby_transition ls (Time.now ()) in 
+           Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'};
+           respond `OK "Done."
 
 (* [can_vote ab] is [ab] if the player specified within [ab] can vote in the current 
  * game_state. Returns Action_Error otherwise *)
@@ -311,7 +384,7 @@ let write_vote ab =
         | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby"))
         | Game gs ->
             let actbuf' = (Time.now (), cd) :: rd.action_buffer in 
-            Hashtbl.set rooms id {rd with action_buffer = actbuf'};  
+            Hashtbl.set rooms ~key:id ~data:{rd with action_buffer = actbuf'};  
             respond `OK "Done."
 
 let player_action conn req body = 
@@ -379,7 +452,7 @@ let refresh_status ab =
         | (pn,time)::t when pn = cd.player_id -> (pn,Time.now ())::update t
         | h::t -> update t 
     in 
-    Hashtbl.set rooms id {rd with last_updated = update rd.last_updated}; 
+    Hashtbl.set rooms ~key:id ~data:{rd with last_updated = update rd.last_updated}; 
     ab 
 
 let extract_status ab = 
@@ -401,7 +474,7 @@ let write_status sj =
     let response = Data.encode_sjson sj in 
     respond `OK response
 
-let room_status conn req body = 
+let room_status _ req body = 
     let get_status body = 
         try 
             let cd = decode_cjson body in 
@@ -421,6 +494,7 @@ let handler ~body:body conn req =
     let uri = Cohttp.Request.uri req in 
     let verb = Cohttp.Request.meth req in 
     match Uri.path uri, verb with
+        | "/daemon", `POST -> daemon_action conn req body 
         | "/create_room", `POST -> create_room conn req body
         | "/join_room", `POST ->  join_room conn req body 
         | "/player_action", `POST -> player_action conn req body
