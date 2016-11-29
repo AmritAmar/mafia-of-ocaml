@@ -4,7 +4,6 @@ open Cohttp_async
 
 open Data 
 open Game 
-open Ringbuffer
 
 type lobby_state = {
     admin : string;
@@ -25,8 +24,6 @@ type room_data = {
 
 type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
-
-type state_info = {day_count: int; game_state: string; announcements: string list}
 
 let rooms = String.Table.create () 
 
@@ -50,7 +47,7 @@ let timeout = Time.Span.of_sec 5.0
 
 let lobby_disconnect ls inactive = 
     let is_active (pn,_) = not (List.mem inactive pn) in 
-    let active = List.filter ls.players is_active in 
+    let active = List.filter ls.players ~f:is_active in 
     match active with 
         | [] -> failwith "rep not ok"
         | (pn,_)::t -> if List.mem inactive ls.admin 
@@ -99,7 +96,7 @@ let heart_beat id now =
             | Game gs -> Game (game_disconnect gs inactive) 
     in 
 
-    Hashtbl.set rooms id {rd with state = state'; last_updated = active}; 
+    Hashtbl.set rooms ~key:id ~data:{rd with state = state'; last_updated = active}; 
     ()
 
 let lobby_transition ls now = 
@@ -154,7 +151,7 @@ let transition_beat id now =
         | Some t -> 
             try 
                 let (st',time) = transition rd now in 
-                Hashtbl.set rooms id {rd with state = st'; transition_at = time};
+                Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = time};
                 ()
             with 
                 _ -> close_room id; ()
@@ -203,7 +200,7 @@ let create_room conn req body =
                 chat_buffer = [];
                 action_buffer = []; 
             } in 
-            Hashtbl.set rooms s room; 
+            Hashtbl.set rooms ~key:s ~data:room; 
             eprintf "Room Created! (%s)\n" s; 
             Server.respond_with_string  ~code:`OK "Room created."
 
@@ -215,7 +212,7 @@ let join_room conn req body =
 
         if (in_use || too_long) then None 
         else if l.players = [] then 
-            Some {l with admin = s; players = [(s,true)]}
+            Some {admin = s; players = [(s,true)]}
         else 
             Some {l with players = (s,false)::l.players}
     in 
@@ -238,7 +235,7 @@ let join_room conn req body =
                                         state = Lobby l';
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
                                        } in 
-                            Hashtbl.replace rooms id room; 
+                            Hashtbl.set rooms ~key:id ~data:room; 
                             eprintf "%s has joined room (%s)\n" cd.player_id id;
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
@@ -305,7 +302,7 @@ let write_chat {id; rd; cd} =
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
     let addition = ((Time.now ()), pn, msg) in 
-    Hashtbl.set rooms id {rd with chat_buffer = (addition :: rd.chat_buffer)};
+    Hashtbl.set rooms ~key:id ~data:{rd with chat_buffer = (addition :: rd.chat_buffer)};
     respond `OK "Done."
 
 (* [write_ready ab] toggles the player's ready state given the client_data and 
@@ -322,7 +319,7 @@ let write_ready {id; rd; cd} =
         | Game _ -> raise (Action_Error (respond`Bad_request "Cannot Ready in Game."))
         | Lobby ls ->
             let pl' = List.fold ~init:[] ~f:update_players ls.players in 
-            Hashtbl.set rooms id {rd with state = Lobby {ls with players = pl'}}; 
+            Hashtbl.set rooms ~key:id ~data:{rd with state = Lobby {ls with players = pl'}}; 
             respond `OK "Done."
 
 (* [is_admin ab] is [ab] if the palyer specified within the action_bundle is an 
@@ -363,7 +360,7 @@ let write_game ab =
         | Game _ -> raise (Action_Error (respond`Bad_request "Game already in progress"))
         | Lobby ls ->
            let (st', t') = lobby_transition ls (Time.now ()) in 
-           Hashtbl.set rooms id {rd with state = st'; transition_at = t'};
+           Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'};
            respond `OK "Done."
 
 (* [can_vote ab] is [ab] if the player specified within [ab] can vote in the current 
@@ -387,7 +384,7 @@ let write_vote ab =
         | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby"))
         | Game gs ->
             let actbuf' = (Time.now (), cd) :: rd.action_buffer in 
-            Hashtbl.set rooms id {rd with action_buffer = actbuf'};  
+            Hashtbl.set rooms ~key:id ~data:{rd with action_buffer = actbuf'};  
             respond `OK "Done."
 
 let player_action conn req body = 
@@ -455,7 +452,7 @@ let refresh_status ab =
         | (pn,time)::t when pn = cd.player_id -> (pn,Time.now ())::update t
         | h::t -> update t 
     in 
-    Hashtbl.set rooms id {rd with last_updated = update rd.last_updated}; 
+    Hashtbl.set rooms ~key:id ~data:{rd with last_updated = update rd.last_updated}; 
     ab 
 
 let extract_status ab = 
@@ -477,7 +474,7 @@ let write_status sj =
     let response = Data.encode_sjson sj in 
     respond `OK response
 
-let room_status conn req body = 
+let room_status _ req body = 
     let get_status body = 
         try 
             let cd = decode_cjson body in 
