@@ -63,7 +63,7 @@ let close_room id =
     () 
 
 let heart_beat id now = 
-    eprintf "Checking heartbeat... (%s) \n" id; 
+    eprintf "\nChecking heartbeat... (%s) \n" id; 
     let rd = Hashtbl.find_exn rooms id in 
 
     let p_disconnect players = 
@@ -106,6 +106,8 @@ let lobby_transition ls now =
     (Game gs', Some t')
 
 let end_game (gs : game_state) = 
+    eprintf ("\t Returning Game to Lobby\n");
+    
     let ply = List.rev (gs.players) in 
     let admin' = match ply with 
                     | [] -> raise (Invalid_argument "room empty")
@@ -136,6 +138,8 @@ let game_transition rd gs now =
     let updates = List.fold ~init:[] ~f:collect_updates rd.action_buffer in 
     let gs' = Game.step_game gs updates in 
     let t' = Time.add now (Game.time_span gs') in 
+    eprintf "Game has transitioned to '%s'. Next Transition at: %s"
+        (Game.string_of_stage gs'.stage) (t' |> Time.to_string_fix_proto `Utc); 
     (Game gs', Some t')
 
 let transition rd now = 
@@ -144,10 +148,15 @@ let transition rd now =
         | Game gs -> game_transition rd gs now
 
 let transition_beat id now = 
+    eprintf "\nChecking Transition Rules... (%s)\n" id;
     let rd = Hashtbl.find_exn rooms id in 
     match rd.transition_at with 
-        | None -> ()
-        | Some t when t > now -> () 
+        | None ->
+            eprintf "\t No Transition Currently Scheduled\n";
+            ()
+        | Some t when t > now -> 
+            eprintf "\tTime To Next Transition: %s\n" (Time.diff t now |> Time.Span.to_short_string);
+            ()
         | Some t -> 
             try 
                 let (st',time) = transition rd now in 
@@ -361,6 +370,7 @@ let write_game ab =
         | Lobby ls ->
            let (st', t') = lobby_transition ls (Time.now ()) in 
            Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'};
+           eprintf "(%s) entering Game Mode\n" id; 
            respond `OK "Done."
 
 (* [can_vote ab] is [ab] if the player specified within [ab] can vote in the current 
@@ -392,6 +402,9 @@ let player_action conn req body =
         try 
             let cd = decode_cjson body in
             let ab = load_room req cd |> in_room in  
+            eprintf "(%s): Player: %s, Action: %s, Arguments: [%s]\n"
+                (ab.id )(cd.player_id) (cd.player_action )
+                (List.fold ~init:"" ~f:(fun acc x -> x ^ ";" ^ acc) cd.arguments);
             match cd.player_action with 
                 | "chat" -> ab |> can_chat |> write_chat 
                 | "ready" -> ab |> write_ready  
