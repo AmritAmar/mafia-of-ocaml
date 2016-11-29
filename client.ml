@@ -42,6 +42,7 @@ let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
 let buf = Core.Std.String.create 4096
 let rec get_input_async f =
+  new_prompt ();
   choose
     [
       choice (Reader.read reader buf) (fun r -> `Reader r);
