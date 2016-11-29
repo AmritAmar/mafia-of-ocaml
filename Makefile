@@ -6,6 +6,9 @@ default:
 	@echo "  make game                      runs game"
 	@echo "  make test_game				    runs test_game
 
+daemon:
+	corebuild -pkgs async,cohttp.async daemon.byte && ./daemon.byte
+
 server:
 	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte
 
