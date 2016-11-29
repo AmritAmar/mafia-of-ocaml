@@ -56,7 +56,9 @@ let rec get_input_async f =
       >>> fun _ ->
       shutdown 0
     | `Ok len ->
-      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
+      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
+              |> String.trim
+      in
       if s = "" then (new_prompt(); get_input_async f)
       else
         let first_word,rest = match Str.(bounded_split (regexp " ") s 2) with
