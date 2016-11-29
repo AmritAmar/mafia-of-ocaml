@@ -165,6 +165,7 @@ let string_of_stage = function
 
 let can_chat state player =
     match state.stage with
+    | Game_Over -> true 
     | Discussion -> is_alive player state
     | Night -> is_mafia player state
     | _ -> false
