@@ -157,6 +157,7 @@ let _ =
     (* update request loop *)
     let rec server_update_loop () =
       let get_update =
+        after (Core.Std.sec 0.5) >>= fun _ ->
         send_post
           (make_uri server_url ("room_status") ~q_params:[("room_id",room)] ())
           ~data:{ player_id=user;
