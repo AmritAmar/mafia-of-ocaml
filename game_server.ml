@@ -430,7 +430,7 @@ let extract_players rd =
 
 let extract_announce rd last = 
     let g_announce acc (posted,a) = 
-        if last > posted then a :: acc
+        if last < posted then a :: acc
                         else acc 
     in 
     
