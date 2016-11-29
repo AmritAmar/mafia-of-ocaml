@@ -66,11 +66,19 @@ let close_room id =
     () 
 
 let heart_beat id now = 
-    eprintf "Checking heartbeat!\n"; 
+    eprintf "Checking heartbeat... \n"; 
     let rd = Hashtbl.find_exn rooms id in 
 
     let p_disconnect players = 
-        let is_healthy (pn,t) = Time.diff now t >= timeout in 
+        let is_healthy (pn,t) = 
+            let diff = Time.diff now t in 
+            eprintf "%s, Difference: %s, Healthy?: %s" 
+                        (pn) 
+                        (Time.Span.to_short_string diff) 
+                        (if (diff <= timeout) then "true" else "false");
+            diff <= timeout 
+        in 
+
         let collect_inactive acc (pn,t) =
             if is_healthy (pn,t) then acc 
                                  else pn :: acc 
@@ -82,6 +90,7 @@ let heart_beat id now =
     in
 
     let (active,inactive) = p_disconnect rd.last_updated in
+    eprintf "Active: %n, Inactive: %n\n" (List.length active) (List.length inactive); 
 
     if active = [] then close_room id (* everyone is gone, close the room *)
     else 
@@ -152,10 +161,15 @@ let transition_beat id now =
             with 
                 _ -> close_room id; ()
     
-let daemon_action conn req body = 
+let server_beat _ = 
     let now = Time.now () in 
+    eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now); (*check heart_beat*)
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
+    ()
+
+let daemon_action conn req body = 
+    server_beat ();
     respond `OK "Done."
 
 (* room creation logic *)
@@ -227,6 +241,7 @@ let join_room conn req body =
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
                                        } in 
                             Hashtbl.replace rooms id room; 
+                            eprintf "%s has joined room (%s)" cd.player_id id;
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
