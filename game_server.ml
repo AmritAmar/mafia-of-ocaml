@@ -206,6 +206,7 @@ let room_op req op =
         | Some s ->
             let room_data = Hashtbl.find_exn rooms s in op s room_data 
 
+
 let create_room conn req body = 
     let id = extract_id req in
     match id with 
@@ -252,13 +253,13 @@ let join_room conn req body =
                             respond `Bad_request  "player_id in use."
                         | Some l' ->
                             let time = Time.now () in 
-                            let room = {rd with  
+                            let room' = {rd with  
                                         state = Lobby l';
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
                                        } in 
-                            Hashtbl.set rooms ~key:id ~data:room; 
+                            Hashtbl.set rooms ~key:id ~data:room'; 
                             eprintf "%s has joined room (%s), Active Players: %d \n" 
-                                cd.player_id id (List.length room.last_updated);
+                                cd.player_id id (List.length room'.last_updated);
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
