@@ -245,7 +245,8 @@ let join_room conn req body =
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
                                        } in 
                             Hashtbl.set rooms ~key:id ~data:room; 
-                            eprintf "%s has joined room (%s)\n" cd.player_id id;
+                            eprintf "%s has joined room (%s), Active Players: %d \n" 
+                                cd.player_id id (List.length room.last_updated);
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
@@ -491,7 +492,9 @@ let room_status _ req body =
     let get_status body = 
         try 
             let cd = decode_cjson body in 
-            let ab = load_room req cd |> in_room in 
+            let ab = load_room req cd |> in_room in
+             (* eprintf "(%s): Player: %s Requesting Update\n"
+                (ab.id )(cd.player_id);*)
             match cd.player_action with 
                 | "get_status" -> ab |> refresh_status |> extract_status |> write_status
                 | _ -> respond `Bad_request "Invalid for this endpoint."
