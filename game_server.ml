@@ -478,7 +478,7 @@ let refresh_status ab =
     let rec update = function 
         | [] -> [] 
         | (pn,time)::t when pn = cd.player_id -> (pn,Time.now ())::update t
-        | h::t -> update t 
+        | h::t -> h::update t 
     in 
     Hashtbl.set rooms ~key:id ~data:{rd with last_updated = update rd.last_updated}; 
     ab 
