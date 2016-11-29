@@ -66,27 +66,25 @@ let close_room id =
     () 
 
 let heart_beat id now = 
-    eprintf "Checking heartbeat... \n"; 
+    eprintf "Checking heartbeat... (%s) \n" id; 
     let rd = Hashtbl.find_exn rooms id in 
 
     let p_disconnect players = 
         let is_healthy (pn,t) = 
             let diff = Time.diff now t in 
-            eprintf "%s, Difference: %s, Healthy?: %s" 
+            eprintf "\t%s, Difference: %s, Healthy?: %s\n" 
                         (pn) 
                         (Time.Span.to_short_string diff) 
                         (if (diff <= timeout) then "true" else "false");
             diff <= timeout 
         in 
 
-        let collect_inactive acc (pn,t) =
-            if is_healthy (pn,t) then acc 
-                                 else pn :: acc 
+        let collect_activity (active,inactive) (pn,t) =
+            if is_healthy (pn,t) then ((pn,t) :: active, inactive) 
+                                 else (active, pn :: inactive)
         in 
 
-        let active = List.filter players ~f:is_healthy in 
-        let inactive = List.fold ~init:[] ~f:(collect_inactive) players in
-        (active,inactive)
+        List.fold ~init:([],[]) ~f:collect_activity players 
     in
 
     let (active,inactive) = p_disconnect rd.last_updated in
@@ -241,7 +239,7 @@ let join_room conn req body =
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
                                        } in 
                             Hashtbl.replace rooms id room; 
-                            eprintf "%s has joined room (%s)" cd.player_id id;
+                            eprintf "%s has joined room (%s)\n" cd.player_id id;
                             respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
             in 
             room_op (req) (lobby_op)
