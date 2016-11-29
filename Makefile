@@ -16,7 +16,7 @@ test:
 	corebuild -pkgs yojson,ansiterminal,ounit test.byte && ./test.byte
 
 client:
-	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ansiterminal client.byte && ./client.byte ${URL}
+	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte ${URL}
 
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte

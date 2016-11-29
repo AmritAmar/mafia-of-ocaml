@@ -346,7 +346,7 @@ let all_ready ab =
      match rd.state with 
         | Game _ -> raise (Action_Error (respond`Bad_request "Players Already in Game"))
         | Lobby ls -> 
-            let ready = List.fold ~init:false ~f:check_ready ls.players in 
+            let ready = List.fold ~init:true ~f:check_ready ls.players in 
             if ready then ab 
             else 
                 raise (Action_Error (respond`Bad_request "Not all players are ready."))
