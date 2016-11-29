@@ -4,7 +4,7 @@ default:
 	@echo "  make client URL=[server URL]   runs client and connects to server"
 	@echo "  make server                    runs server"
 	@echo "  make game                      runs game"
-	@echo "  make test_game				    runs test_game
+	@echo "  make test_game                 runs test_game"
 
 daemon:
 	corebuild -pkgs async,cohttp.async daemon.byte && ./daemon.byte
