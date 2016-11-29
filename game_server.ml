@@ -180,6 +180,7 @@ let transition_beat id now =
 let server_beat _ = 
     let now = Time.now () in 
     eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
+    eprintf "Hashtbl.keys: %d\n" (List.length (Hashtbl.keys rooms)); 
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now); (*check heart_beat*)
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
     ()
@@ -256,7 +257,7 @@ let join_room conn req body =
                             let room' = {rd with  
                                         state = Lobby l';
                                         last_updated = (cd.player_id, time) :: rd.last_updated 
-                                       } in 
+                                        } in 
                             Hashtbl.set rooms ~key:id ~data:room'; 
                             eprintf "%s has joined room (%s), Active Players: %d \n" 
                                 cd.player_id id (List.length room'.last_updated);
