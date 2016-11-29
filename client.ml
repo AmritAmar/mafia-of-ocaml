@@ -2,15 +2,11 @@ open Data
 open Display
 open Client_state
 open Str
-open Core.Std
 open Async.Std
 open Cohttp
 open Cohttp_async
 
 module Fd = Unix.Fd
-
-(* Case insensitive equals *)
-let (+=+) s1 s2 = (String.lowercase s1) = (String.lowercase s2)
 
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
@@ -44,7 +40,7 @@ let rec is_in n = function
 
 let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
-let buf = String.create 4096
+let buf = Core.Std.String.create 4096
 let rec get_input_async f =
   choose
     [
@@ -60,12 +56,14 @@ let rec get_input_async f =
       >>> fun _ ->
       shutdown 0
     | `Ok len ->
-      let s = (Substring.create buf ~pos:0 ~len |> Substring.to_string) in
+      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
+              |> String.trim
+      in
       if s = "" then (new_prompt(); get_input_async f)
       else
         let first_word,rest = match Str.(bounded_split (regexp " ") s 2) with
-                              | h::[]    -> (String.lowercase h,"")
-                              | h::t::[] -> (String.lowercase h,t)
+                              | h::[]    -> (String.lowercase_ascii h,"")
+                              | h::t::[] -> (String.lowercase_ascii h,t)
                               | _        -> ("","") (* not possible *)
         in
         if (is_in first_word ["chat"; "ready"; "start"; "vote"])
@@ -89,14 +87,14 @@ let _ =
     let input = Pervasives.read_line () in
     let rec found_in s = function
       | [] -> false
-      | h::t -> if s +=+ h then true else found_in s t
+      | h::t -> if s = h then true else found_in s t
     in
     if input = "" then get_input ~commands:commands ()
     else if commands = [] then ("",input)
     else
       let first_word,rest = match Str.(bounded_split (regexp " ") input 2) with
-                            | h::[]    -> (String.lowercase h,"")
-                            | h::t::[] -> (String.lowercase h,t)
+                            | h::[]    -> (String.lowercase_ascii h,"")
+                            | h::t::[] -> (String.lowercase_ascii h,t)
                             | _        -> ("","") (* not possible *)
       in
       if found_in first_word commands then (first_word,rest)
@@ -191,7 +189,7 @@ let _ =
           (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
           ~data:{player_id=user; player_action=cmd; arguments=[args]}
           ())
-        (fun (code,body) -> add_announcements client_s [body];
+        (fun (_,body) -> add_announcements client_s [body];
                             update_announcements client_s.announcements;
                             user_input_loop ())
       )
