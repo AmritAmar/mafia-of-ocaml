@@ -40,6 +40,17 @@ let extract_id req =
     let uri = Cohttp.Request.uri req in 
     Uri.get_query_param uri "room_id"
 
+let print_room rd = 
+    let cur_state = match rd.state with Game _ -> "Game" | Lobby _ -> "Lobby" in 
+    let transition_at = match rd.transition_at with None -> "N/A" | Some t -> Time.to_string_fix_proto `Utc t in
+    let last_updated = List.fold ~init:"" 
+               ~f: (fun acc (pn,t) -> acc ^ ("(" ^ pn ^ "," ^ (Time.to_string_fix_proto `Utc t) ^ ") ;"))
+               rd.last_updated in 
+    let messages = List.length rd.chat_buffer in 
+    let actions = List.length rd.action_buffer in 
+    eprintf "State: %s, Transition At: %s\nPlayer Status: %s\n #msgs: %d, #actions: %d\n" 
+        cur_state transition_at last_updated messages actions
+
 (* -------------------------------------------------------- *)
 (* Daemons *)
 
@@ -65,6 +76,7 @@ let close_room id =
 let heart_beat id now = 
     eprintf "\nChecking heartbeat... (%s) \n" id; 
     let rd = Hashtbl.find_exn rooms id in 
+    print_room rd; 
 
     let p_disconnect players = 
         let is_healthy (pn,t) = 
