@@ -4,16 +4,10 @@ let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
 let alive = [ "Clarkson" ; "Myers" ]
 
-let test_a = ["example announcement"; "hello this is a very long announcement that
-  I really had to announce"; "this is another very long
-  announcement just for testing"; "this is another very long
-  announcement just for testing"; "this is another very long
-  announcement just for testing"; "this is another very long
-  announcement just for testing this is another"; "this is another very long
-  announcement just for testing"]
+let test_a = ["example announcement"]
 
-let test_c = [("Clarkson","this is a really cool game");
-("Myers","I agree with Clarkson that this is a cool game")]
+let test_c = [("Myers","I think you are the mafia");
+("Clarkson","I don't think I am the mafia")]
 
 let scroll = [
 "                                               .---.";
@@ -80,19 +74,19 @@ let authors = [
 "       \\| ";]
 
 let game_state = [
-"  ____________________________________________________";
-" / \\                                                  \\";
-" |  |                                                 |";
-"  \\_|                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |                                                 |";
-"    |  _______________________________________________|__";
-"    \\_/_________________________________________________/"]
+"  ______________________________________________________";
+" / \\                                                    \\";
+" |  |                                                   |";
+"  \\_|                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |                                                   |";
+"    |  _________________________________________________|__";
+"    \\_/___________________________________________________/"]
 
 let chat_log = [
 " _______________________________________________________";
@@ -200,17 +194,22 @@ let screen_width = 100
 
 let screen_height = 41
 
-(* let split_word w n acc =
-  match w, n, acc with
-  | "",0,"" -> failwith "Invalid"
-  | "",0,s -> failwith "Invalid"
-  | s,0,"" -> failwith "Invalid"
-  | s1,0,s2 -> failwith "Invalid"
-  | "",n,"" -> failwith "Invalid"
-  | "",n,s -> failwith "Invalid"
-  | s, n, "" -> (String.sub s 0 (n-1),String.sub s (n-1) (String.length s-2))
-  | s1, n, s2 -> (String.sub s1 0 (n-(String.length s2)-1),String.sub s1 (n-(String.length s2)-1) (String.length s1-2))
- *)
+(* let append_head str n acc =
+  acc^" "^(String.sub str 0 n)
+
+let explode s =
+  let rec exp i l =
+    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
+  exp (String.length s - 1) []
+
+let  split_body str len =
+  let rec helper w acc =
+  match w with
+  | [] ->
+  | h::t -> if
+
+in helper [] *)
+
 (* [split_string n str] inputs a string [str] and splits it into a list of
  * strings that are at most [n] characters long where n > 0.
  * precondition: n > 0
@@ -276,6 +275,31 @@ let erase_box x y width height =
   print_object x y [] screen_height lst;
   ()
 
+let rec printer x y style endline arr =
+  match arr with
+  | [] -> ()
+  | h::t -> if y>endline then (set_cursor x y;
+                           print_string style h;
+                           printer x (y-1) style endline t)
+            else ()
+
+
+let rec print_chat x y style1 style2 endline n1 n2 lst =
+  match lst with
+  | [] -> ()
+  | h::t -> let user = split_string n1 (fst h) in
+            let chat = split_string n2 (snd h) in
+            let len = max (List.length user) (List.length chat) in
+  if (List.length user) > (List.length chat) then
+    (printer x y style1 endline (List.rev user);
+    printer (x+n1+1) (y-len+(List.length chat)) style2 endline (List.rev chat);
+    print_chat x (y-len-1) style1 style2 endline n1 n2 t)
+  else
+    (printer x (y-len+(List.length user)) style1 endline (List.rev user);
+    printer (x+n1+1) y style2 endline (List.rev chat);
+    print_chat x (y-len-1) style1 style2 endline n1 n2 t)
+
+
 let update_announcements a =
   save_cursor();
   erase_box 68 8 25 27;
@@ -283,32 +307,22 @@ let update_announcements a =
   restore_cursor();
   ()
 
-let rec fst_lst lst =
-  match lst with
-  | [] -> []
-  | h::t -> (fst h)::(fst_lst t)
-
-let rec snd_lst lst =
-  match lst with
-  | [] -> []
-  | h::t -> (snd h)::(snd_lst t)
-
 let update_chat log =
   save_cursor();
   erase_box 8 17 47 20;
-  print_list 8 17 [cyan] 37 15 (fst_lst log) 1;
-  print_list 17 17 [yellow] 37 40 (snd_lst log) 1;
+  print_chat 8 36 [yellow] [cyan] 16 10 36 log;
   restore_cursor();
   ()
 
 let update_game_state day game_stage alive dead =
   save_cursor();
   erase_box 12 3 4 1;
-  erase_box 8 5 46 7;
-  print_object 12 3 [blue] 12 [string_of_int day];
-  print_object 8 5 [magenta] 12 [game_stage];
-  print_list 21 5 [green] 12 20 alive 0;
-  print_list 38 5 [red] 12 20 dead 0;
+  erase_box 8 6 11 1;
+  erase_box 21 5 33 7;
+  print_object 12 3 [blue;Bold] 12 [string_of_int day];
+  print_object 8 6 [magenta;Bold] 12 [game_stage];
+  print_list 23 5 [green] 12 20 alive 0;
+  print_list 40 5 [red] 12 20 dead 0;
   restore_cursor();
   ()
 
@@ -332,8 +346,10 @@ let show_state_and_chat () =
   print_object 1 1 [yellow] screen_height game_state;
   print_object 3 14 [blue] screen_height chat_log;
   print_object 8 3 [Bold;yellow] screen_height ["DAY"];
-  print_object 21 3 [Bold;yellow] screen_height ["ALIVE"];
-  print_object 38 3 [Bold;yellow] screen_height ["DEAD"];
+  print_object 8 5 [yellow] screen_height ["It is"];
+  print_object 8 7 [yellow] screen_height ["time"];
+  print_object 23 3 [Bold;yellow] screen_height ["ALIVE"];
+  print_object 40 3 [Bold;yellow] screen_height ["DEAD"];
   print_object 40 15 [Bold;white;on_blue] screen_height [" CHAT LOG "];
   ()
 
@@ -349,6 +365,6 @@ let new_prompt () =
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
-  update_game_state 20 "Morning" alive dead;
-  new_prompt ();
- *)
+  update_game_state 20 "VOTING" alive dead;
+  new_prompt (); *)
+
