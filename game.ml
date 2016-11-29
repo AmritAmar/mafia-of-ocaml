@@ -189,7 +189,7 @@ let disconnect_player state player =
 let time_span state = 
     match state.stage with
     | Voting -> Core.Time.Span.minute
-    | Game_Over -> Core.Time.Span.minute
+    | Game_Over -> Core.Time.Span.of_sec 30.
     | Discussion -> Core.Time.Span.minute
     | Night -> Core.Time.Span.minute
 
