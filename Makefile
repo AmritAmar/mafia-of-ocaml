@@ -4,6 +4,7 @@ default:
 	@echo "  make client URL=[server URL]   runs client and connects to server"
 	@echo "  make server                    runs server"
 	@echo "  make game                      runs game"
+	@echo "  make test_game				    runs test_game
 
 server:
 	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte
@@ -16,4 +17,8 @@ client:
 
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte
+
+test_game:
+	corebuild -pkgs yojson,ansiterminal,ounit test_game.byte && ./test_game.byte
+
 

@@ -1,0 +1,53 @@
+open OUnit2
+open Game
+open Core
+open Data
+
+let id_lst = ["Rachel";"Tyler";"Michael";"Irene"]
+let plr_lst = [("Irene",Innocent);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
+let kill_irene = [("Irene",Dead);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
+let init_state = {day_count = 0; stage = Voting; 
+        players = plr_lst;  
+        announcement_history = []}
+let vote_kill_irene = handle_exec_vote init_state ["Irene";"Irene";"Rachel";"Michael"]
+let vote_kill_irene2 = handle_exec_vote init_state ["Irene";"Rachel";"Michael";"Irene"]
+let vote_kill_irene3 = handle_exec_vote init_state ["Irene";"Michael";"Michael";"Irene"]
+let client_json1 = [{player_id = "Irene";player_action = "vote";arguments = ["Michael"]};
+					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]};
+					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
+					{player_id = "Rachel";player_action = "vote";arguments = ["Michael"]};
+					{player_id = "Irene";player_action = "vote";arguments = ["Tyler"]};
+					{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]}]
+let latest_client_json1 = 
+					[{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]};
+					{player_id = "Irene";player_action = "vote";arguments = ["Tyler"]};
+					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
+					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]}
+					]
+
+let game_tests = [
+  "assign_roles" >:: (fun _ -> assert_equal 
+  	plr_lst
+    (assign_roles 0 [] id_lst (List.length id_lst)));
+  "kill_player" >:: (fun _ -> assert_equal kill_irene
+    (kill_player "Irene" plr_lst));
+  "handle_exec_vote_inno" >:: (fun _ -> assert_equal kill_irene
+  	(vote_kill_irene.players));
+  "handle_exec_vote_inno" >:: (fun _ -> assert_equal 
+  	("Sadly, Irene was voted guilty and has been executed.\n"
+  	^"Irene was an Innocent citizen.")
+  	(vote_kill_irene.announcement_history |> List.hd |> snd));
+  "handle_exec_vote_inno" >:: (fun _ -> assert_equal kill_irene
+  	(vote_kill_irene2.players));
+  "handle_exec_vote_amb" >:: (fun _ -> assert_equal kill_irene
+  	(vote_kill_irene3.players)); (* ambiguous!!! *)
+  "latest_votes" >:: (fun _ -> assert_equal latest_client_json1
+    ((latest_votes [] client_json1)));
+  "night_to_disc" >:: (fun _ -> assert_equal (state)
+    (night_to_disc state client_json list));
+
+]
+
+let other_tests = []
+
+let _ = run_test_tt_main ("suite" >::: game_tests @ other_tests)

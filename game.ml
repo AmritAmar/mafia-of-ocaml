@@ -2,7 +2,7 @@ open Yojson.Basic.Util
 open Str
 open Data
 open Core
-
+exception Game_Over
 type player_name = string
 type chat_message = string
 type announcement = string
@@ -25,9 +25,9 @@ type game_state = {
 let rec assign_roles counter assigned players num_players= 
     match players with 
     [] -> assigned
-    | h::t -> if (counter > num_players/4) then 
+    | h::t -> if (counter >= num_players/4) then 
         assign_roles (counter+1) ((h,Innocent)::assigned) t num_players
-    else  assign_roles (counter+1) ((h,Mafia)::assigned) t num_players
+    else assign_roles (counter+1) ((h,Mafia)::assigned) t num_players
 
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
@@ -40,10 +40,10 @@ let init_state lst =
 let kill_player p pl =
     List.map (fun (x,y) -> if x=p then (x,Dead) else (x,y)) pl
 
-
 (*
  * Executes player that at least half of the players
  * vote on
+ * If there is a tie, returns one of the players.
  *)
 let handle_exec_vote (st:game_state) (players:player_name list)  =
     let p = List.sort String.compare players in 
@@ -89,16 +89,16 @@ let end_check (players : (player_name * role) list) =
 (** returns whether or not player is a mafia
  *)
 let is_mafia player state = 
-    if List.assoc player state.players = Mafia then true else false
+    List.assoc player state.players = Mafia
 
 (** returns whether or not player is alive
  *)
 let is_alive player state =
-    if List.assoc player state.players <> Dead then true else false
-
+    List.assoc player state.players <> Dead
 
 (**
  * Gets latest votes given a list of votes
+ * Assumes that later votes are closer to the tail of the list
  *)
 let rec latest_votes latest votes = 
     match votes with
@@ -189,7 +189,7 @@ let disconnect_player state player =
 let time_span state = 
     match state.stage with
     | Voting -> Core.Time.Span.minute
-    | Game_Over -> Core.Time.Span.second
+    | Game_Over -> Core.Time.Span.minute
     | Discussion -> Core.Time.Span.minute
     | Night -> Core.Time.Span.minute
 
@@ -200,9 +200,21 @@ let time_span state =
  *)
 let step_game st updates = 
     (* maybe not most fluent game play if end check is here *)
-    if end_check st.players then st else 
+    if (List.fold_left (fun a (_,x)-> (x = Mafia) || a) false st.players) then
+        {day_count = st.day_count; stage = Game_Over; 
+        players = st.players; 
+        announcement_history = (Time.now (),
+             "Congratulations! The Innocents have won.")
+             ::st.announcement_history}
+    else if 
+        (List.fold_left (fun a (_,x)-> (x = Innocent) || a) false st.players) 
+    then {day_count = st.day_count; stage = Game_Over; 
+        players = st.players; 
+        announcement_history = (Time.now (),
+             "Congratulations! The Mafias have won.")
+             ::st.announcement_history} else 
     match st.stage with 
     Night -> night_to_disc st updates
     | Discussion -> disc_to_voting st updates
     | Voting -> voting_to_night st updates
-    | Game_Over -> st (* What to do in game_over? *)
+    | Game_Over -> raise Game_Over (* What to do in game_over? *)
