@@ -6,8 +6,8 @@ open Core
 type player_name = string
 type chat_message = string
 
-type announcement = announce_type * string 
-and announce_type = All | Innocents | Mafias | Player of player_name 
+type target = All | Innocents | Mafias | Player of player_name 
+type announcement = target * string 
 
 type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
@@ -179,8 +179,8 @@ let can_vote state player =
     | Night -> is_mafia player state
     | _ -> false
 
-let can_recieve state player (a_t,_) = 
-    match a_t with 
+let can_recieve state player target = 
+    match target with 
         | All -> true 
         | Innocents -> not (is_mafia player state)
         | Mafias -> is_mafia player state 

@@ -14,11 +14,14 @@ type server_state =
    | Lobby of lobby_state 
    | Game of game_state  
 
+type chat_message = 
+    (target * string * string)
+
 type room_data = {
     state: server_state;  
     transition_at: timestamp option; 
     last_updated: (string * timestamp) list;  
-    chat_buffer: (timestamp * string * string) list;
+    chat_buffer: (timestamp * chat_message) list;
     action_buffer: (timestamp * client_json) list;
 }
 
@@ -339,7 +342,8 @@ let can_chat ab =
 let write_chat {id; rd; cd} = 
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
-    let addition = ((Time.now ()), pn, msg) in 
+    (* TODO : Check who the message is for *)
+    let addition = ((Time.now ()), (All, pn, msg)) in 
     Hashtbl.set rooms ~key:id ~data:{rd with chat_buffer = (addition :: rd.chat_buffer)};
     respond `OK "Done."
 
@@ -477,26 +481,33 @@ let extract_players rd =
         | Lobby ls -> List.fold ~init: [] ~f: l_players ls.players
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
-let extract_announce cd rd last =     
-    
-    let format_announce (a_t, msg) = 
-        let audience = match a_t with 
-                        | All -> "All"
-                        | Innocents -> "Innocent" 
-                        | Mafias -> "Mafia"
-                        | Player s when cd.player_id = s -> "Me"
-                        | Player _ -> failwith "rep_not_ok" 
 
-        in 
-        (audience,msg)
+let hasnt_recieved last posted = last < posted
+
+let intended_for rd cd target = 
+    match rd.state with 
+        | Lobby l -> true (*no secret chat in lobby *)
+        | Game gs -> can_recieve gs cd.player_id target
+
+let format_target player_id target = 
+     match target with 
+        | All -> "All"
+        | Innocents -> "Innocent" 
+        | Mafias -> "Mafia"
+        | Player s when player_id = s -> "Me"
+        | Player _ -> failwith "rep_not_ok" 
+
+let extract_announce cd rd last =     
+    let format_announce (target, msg) = 
+        (format_target cd.player_id target ,msg)
     in
 
     let get_announce gs = 
-        fun acc (posted,an) ->
-            let new_msg = last < posted in 
-            let intended_for = can_recieve gs cd.player_id an in 
-            if new_msg && intended_for 
-                then (format_announce an) :: acc
+        fun acc (posted,(target,a)) ->
+            let new_msg = hasnt_recieved last posted in 
+            let intended = intended_for rd cd target in 
+            if new_msg && intended 
+                then (format_announce (target,a)) :: acc
                 else acc 
     in 
     
@@ -504,12 +515,21 @@ let extract_announce cd rd last =
         | Lobby _ -> [] (* currently there are no announcements in the lobby *)
         | Game gs -> List.fold ~init:[] ~f:(get_announce gs) gs.announcement_history
 
-let extract_messages rd last = 
-    let messages acc (posted,pn,msg) = 
-        if posted > last then (pn,msg)::acc
-                        else acc 
+let extract_messages rd cd last = 
+    
+    let format_message (target, pn, msg) = 
+        (format_target pn target, pn, msg)
+    in
+
+    let get_messages acc (posted,(target,pn,msg)) = 
+        let new_msg = hasnt_recieved last posted in 
+        let intended = intended_for rd cd target in 
+        if new_msg && intended 
+            then format_message (target,pn,msg)::acc
+            else acc 
     in 
-    List.fold ~init:[] ~f: messages rd.chat_buffer 
+
+    List.fold ~init:[] ~f: get_messages rd.chat_buffer 
 
 let refresh_status ab = 
     let {id; rd; cd} = ab in 

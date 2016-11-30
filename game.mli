@@ -4,8 +4,8 @@ open Core
 type player_name = string
 type chat_message = string
 
-type announcement = announce_type * string 
-and announce_type = All | Innocents | Mafias | Player of player_name 
+type target = All | Innocents | Mafias | Player of player_name 
+type announcement = target * string 
 
 type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
@@ -45,9 +45,9 @@ val can_chat : game_state -> player_name -> bool
  *)
 val can_vote : game_state -> player_name -> bool
 
-(* [can_recieve] determines if a player can recieve an announcement in this 
+(* [can_recieve] determines if a player satisfies the target group in this 
  * game state. *)
-val can_recieve : game_state -> player_name -> announcement -> bool 
+val can_recieve : game_state -> player_name -> target -> bool 
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
