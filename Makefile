@@ -5,6 +5,7 @@ default:
 	@echo "  make server                    runs server"
 	@echo "  make game                      runs game"
 	@echo "  make test_game                 runs test_game"
+	@echo "  make clean                     removes _build folder and .byte files"
 
 daemon:
 	corebuild -pkgs async,cohttp.async daemon.byte && ./daemon.byte
@@ -24,4 +25,5 @@ game:
 test_game:
 	corebuild -pkgs yojson,ansiterminal,ounit test_game.byte && ./test_game.byte
 
-
+clean:
+	rm -rf _build *.byte
