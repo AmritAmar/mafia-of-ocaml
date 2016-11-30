@@ -9,7 +9,7 @@ type client_state = {
   mutable dead_players: string list;
   mutable timestamp: string;
   mutable msgs: (string * string) list;
-  mutable announcements: string list;
+  mutable announcements: (string * string) list;
 }
 
 let update_players cs active =
@@ -31,17 +31,3 @@ let update_client_state (cs:client_state) (sj:server_json) =
   cs.msgs <- sj.new_messages @ cs.msgs;
   cs.announcements <- sj.new_announcements @ cs.announcements;
   (new_gs,sj.new_messages <> [],sj.new_announcements <> [])
-
-
-(* get top n elements of list *)
-let rec select_top n lst =
-  if n = 0 then []
-  else match lst with
-       | []   -> []
-       | h::t -> h::(select_top (n-1) t)
-
-let get_recent_announcements cs =
-  select_top 10 cs.announcements
-
-let get_recent_msgs cs =
-  select_top 10 cs.msgs

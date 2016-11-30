@@ -4,7 +4,7 @@ type server_json = {
   day_count: int;
   game_stage: string;
   active_players: string list;
-  new_announcements: string list;
+  new_announcements: (string * string) list;
   new_messages: (string * string) list;
   timestamp: string;
 }
@@ -26,7 +26,10 @@ let encode_sjson sj =
     ("day_count", `Int sj.day_count);
     ("game_stage", `String sj.game_stage);
     ("active_players", `List (to_json_list sj.active_players));
-    ("new_announcements", `List (to_json_list sj.new_announcements));
+    ("new_announcements", `List (List.map
+                                 (fun (typ,txt) -> `Assoc [("type",`String typ);
+                                                           ("txt",`String txt)])
+                                 sj.new_announcements));
     ("new_messages", `List (List.map
                             (fun (p,msg) -> `Assoc [ ("player_id",`String p);
                                                      ("message",`String msg) ])
@@ -49,7 +52,10 @@ let decode_sjson s =
     day_count = member "day_count" j |> to_int;
     game_stage = member "game_stage" j |> to_string;
     active_players = member "active_players" j |> to_str_list;
-    new_announcements = member "new_announcements" j |> to_str_list;
+    new_announcements = member "new_announcements" j
+                        |> to_list
+                        |> List.map (fun n -> (member "type" n |> to_string,
+                                               member "text" n |> to_string));
     new_messages = member "new_messages" j
                    |> to_list
                    |> List.map (fun n -> (member "player_id" n |> to_string,

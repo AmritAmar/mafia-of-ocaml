@@ -9,7 +9,7 @@ type client_state = {
   mutable dead_players: string list;
   mutable timestamp: string;
   mutable msgs: (string * string) list;
-  mutable announcements: string list;
+  mutable announcements: (string * string) list;
 }
 
 (**
@@ -26,15 +26,3 @@ val update_players : client_state -> string list -> unit
  * is whether announcements has been updated.
  *)
 val update_client_state : client_state -> server_json -> (bool * bool * bool)
-
-(**
- * [get_recent_announcements cs] will return the most recent announcements in
- * [cs], sorted from most recent to least recent.
- *)
-val get_recent_announcements : client_state -> string list
-
-(**
- * [get_recent_msgs cs] will return the most recent messages in [cs], sorted
- * from most recent to least recent.
- *)
-val get_recent_msgs : client_state -> (string * string) list

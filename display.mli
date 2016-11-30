@@ -17,7 +17,7 @@ val update_game_state : int -> string -> string list -> string list -> unit
  * the given list of strings. Returns the cursor to its position before this
  * function was called.
  *)
-val update_announcements : string list -> unit
+val update_announcements : (string * string) list -> unit
 
 (**
  * Prints prompt characters at the beginning of the last line (e.g. "> ") and
