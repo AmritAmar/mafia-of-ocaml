@@ -51,8 +51,8 @@ let print_room rd =
     eprintf "State: %s, Transition At: %s\nPlayer Status: %s\n #msgs: %d, #actions: %d\n" 
         cur_state transition_at last_updated messages actions
 
-(* -------------------------------------------------------- *)
-(* Daemons *)
+(* ----------------------------------------------------- *)
+(* - Daemon: *)
 
 let timeout = Time.Span.of_sec 5.0
 
@@ -123,7 +123,7 @@ let end_game (gs : game_state) =
     let ply = List.rev (gs.players) in 
     let admin' = match ply with 
                     | [] -> raise (Invalid_argument "room empty")
-                    | (pn,_)::t -> pn
+                    | (pn,_)::_ -> pn
     in 
 
     let grab_players acc (pn,_) = 
@@ -169,7 +169,7 @@ let transition_beat id now =
         | Some t when t > now -> 
             eprintf "\tTime To Next Transition: %s\n" (Time.diff t now |> Time.Span.to_short_string);
             ()
-        | Some t -> 
+        | Some _ -> 
             try 
                 let (st',time) = transition rd now in 
                 Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = time};
@@ -184,7 +184,7 @@ let server_beat _ =
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
     ()
 
-let daemon_action conn req body = 
+let daemon_action _ _ _ = 
     server_beat ();
     respond `OK "Done."
 
@@ -195,32 +195,16 @@ let rec run_daemon () =
   in
     upon helper (fun _ -> run_daemon ())
 
-(* room creation logic *)
-(* TODO: Rewrite Using Exceptions *)
-(* -------------------------------------------------------- *)
+(* ----------------------------------------------------- *)
+(* - Room Creation: *)
 
-(* [room_op req op] passes the room information matching the room_id in [req]
- * to [op] if it exists. Returns Bad_Request if the room_id is malformed 
- * or the room doesn't exist.*)
-
-let room_op req op =
-    let id = extract_id req in 
-    match id with 
-        | None -> 
-            respond `Bad_request "Malformed room_id."
-        | Some s when not (Hashtbl.mem rooms s) -> 
-            respond `Bad_request "Room doesn't exist."
-        | Some s ->
-            let room_data = Hashtbl.find_exn rooms s in op s room_data 
-
-
-let create_room conn req body = 
+let create_room _ req _ = 
     let id = extract_id req in
     match id with 
         | None -> 
-            respond`Bad_request "Malformed room_id" 
+            respond `Bad_request "Malformed room_id" 
         | Some s when Hashtbl.mem rooms s -> 
-            respond`Bad_request "Room already exists." 
+            respond `Bad_request "Room already exists." 
         | Some s -> 
             let room = {
                 state = Lobby {admin = ""; players = []};
@@ -233,49 +217,8 @@ let create_room conn req body =
             eprintf "Room Created! (%s)\n" s; 
             Server.respond_with_string  ~code:`OK "Room created."
 
-
-let join_room conn req body = 
-    let add_player s l =  
-        let in_use = List.fold ~init:false ~f:(fun acc (n,_) -> (n = s) || acc) l.players in 
-        let too_long = String.length s >= 15 in 
-
-        if (in_use || too_long) then None 
-        else if l.players = [] then 
-            Some {admin = s; players = [(s,true)]}
-        else 
-            Some {l with players = (s,false)::l.players}
-    in 
-
-    let join body = 
-        try 
-            let cd = decode_cjson body in 
-            let lobby_op id rd = 
-                match rd.state with 
-                    | Game _ ->
-                        respond `Bad_request "Game already in progress."
-                    | Lobby l ->
-                    let result = add_player (cd.player_id) (l) in 
-                    (match result with 
-                        | None -> 
-                            respond `Bad_request  "player_id in use."
-                        | Some l' ->
-                            let time = Time.now () in 
-                            let room' = {rd with  
-                                        state = Lobby l';
-                                        last_updated = (cd.player_id, time) :: rd.last_updated 
-                                        } in 
-                            Hashtbl.set rooms ~key:id ~data:room'; 
-                            eprintf "%s has joined room (%s), Active Players: %d \n" 
-                                cd.player_id id (List.length room'.last_updated);
-                            respond `OK (Time.to_string_fix_proto `Utc (Time.now ())))   
-            in 
-            room_op (req) (lobby_op)
-        with _ -> respond `Bad_request "Malformed client_action.json"
-
-    in 
-
-    Body.to_string body >>= join 
-(* -------------------------------------------------------- *)
+(* ----------------------------------------------------- *)
+(* - Room Join: *)
 
 (* [load_room req cd] returns an action_bundle using the room_id located within
  * the query paramaters of [req]. 
@@ -291,6 +234,63 @@ let load_room req cd =
             raise (Action_Error (respond `Bad_request "Room doesn't exist."))
         | Some s ->
             let room_data = Hashtbl.find_exn rooms s in {id = s; rd = room_data; cd = cd}
+
+let valid_id ab = 
+    let id = ab.cd.player_id in 
+    let players = ab.rd.last_updated in 
+    
+    let in_use = 
+        List.fold ~init:false 
+                  ~f:(fun acc (n,_) -> (n = id) || acc) 
+                  players in 
+    
+    let too_long = String.length id >= 15 in 
+    
+    if (in_use) 
+        then raise (Action_Error (respond `Bad_request "Player name in use."))
+    else if (too_long) 
+        then raise (Action_Error (respond `Bad_request "Player name too long."))
+    else ab 
+
+let lobby_join ls cd = 
+    let id = cd.player_id in 
+    if (ls.players = []) then {admin = id; players = [(id,true)]}
+    else {ls with players = (id,false)::ls.players}
+
+let write_join ab = 
+    let {id; rd; cd} = ab in 
+    match rd.state with 
+        | Game _ -> 
+            raise (Action_Error (respond `Bad_request "Game already in progress."))
+        | Lobby ls ->
+            let ls' = lobby_join ls cd in 
+            let time = Time.now () in 
+            let rd' = { rd with 
+                            state = Lobby ls'; 
+                            last_updated = (cd.player_id, time) :: rd.last_updated;
+                      } in 
+            Hashtbl.set rooms ~key:id ~data:rd';
+            
+            eprintf "%s has joined room (%s), Active Players: %d \n" 
+                        cd.player_id id (List.length rd'.last_updated);
+            
+            respond `OK (Time.to_string_fix_proto `Utc time)   
+
+let join_room _ req body = 
+    let join body = 
+        try 
+            let cd = decode_cjson body in 
+            let ab = load_room req cd in 
+            ab |> valid_id |> write_join
+        with 
+            | Action_Error response -> response 
+            | _ -> respond `Bad_request "Malformed client_action.json"
+    in 
+
+    Body.to_string body >>= join 
+
+(* ----------------------------------------------------- *)
+(* - Player Action: *)
 
 (* [in_room ab] is [ab] if the player specified in the action bundle's client data 
  * is within the room specified in the action bundle's room_data. 
@@ -314,10 +314,12 @@ let in_room ab =
  * is able to chat in the supplied room. Returns Action Error otherwise *)
 
 let can_chat ab = 
-    let {id; rd; cd} = ab in 
+    let rd = ab.rd in 
+    let cd = ab.cd in 
+
     let pn = cd.player_id in 
     let can_chat = match rd.state with 
-                    | Lobby ls -> true 
+                    | Lobby _ -> true 
                     | Game gs -> Game.can_chat gs pn 
     in 
 
@@ -357,7 +359,9 @@ let write_ready {id; rd; cd} =
  * Returns Action_Error otherwise. *)
 
 let is_admin ab = 
-    let {id; rd; cd} = ab in
+    let rd = ab.rd in 
+    let cd = ab.cd in 
+
     match rd.state with 
         | Game _ -> raise (Action_Error (respond`Bad_request "Cannot be Admin in Game"))
         | Lobby ls ->
@@ -369,7 +373,7 @@ let is_admin ab =
  * have readied up, and the room is in lobby mode. Returns Action_Error otherwise *)
 
 let all_ready ab =
-     let {id; rd; cd} = ab in 
+     let rd = ab.rd in 
 
      let check_ready acc (_,ready) = acc && ready in 
 
@@ -385,7 +389,9 @@ let all_ready ab =
  * associated game_state daemons. Requires: Room is in Lobby Mode *)
 
 let write_game ab = 
-    let {id; rd; cd} = ab in 
+    let id = ab.id in 
+    let rd = ab.rd in 
+
     match rd.state with 
         | Game _ -> raise (Action_Error (respond`Bad_request "Game already in progress"))
         | Lobby ls ->
@@ -398,9 +404,11 @@ let write_game ab =
  * game_state. Returns Action_Error otherwise *)
 
 let can_vote ab = 
-    let {id; rd; cd} = ab in 
+    let id = ab.id in 
+    let rd = ab.rd in 
+
     match rd.state with 
-        | Lobby ls -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby.")) 
+        | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby.")) 
         | Game gs ->
             if Game.can_vote gs id then ab 
             else 
@@ -413,12 +421,12 @@ let write_vote ab =
     let {id; rd; cd} = ab in 
     match rd.state with 
         | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby"))
-        | Game gs ->
+        | Game _ ->
             let actbuf' = (Time.now (), cd) :: rd.action_buffer in 
             Hashtbl.set rooms ~key:id ~data:{rd with action_buffer = actbuf'};  
             respond `OK "Done."
 
-let player_action conn req body = 
+let player_action _ req body = 
     let action body = 
         try 
             let cd = decode_cjson body in
@@ -439,16 +447,17 @@ let player_action conn req body =
 
     Body.to_string body >>= action
 
-(* ------------------------------------------------------------- *)
+(* ----------------------------------------------------- *)
+(* - Room Status: *)
 
 let extract_days rd = 
     match rd.state with 
-        | Lobby ls -> -1 (* no days in lobby *) 
+        | Lobby _ -> -1 (* no days in lobby *) 
         | Game gs -> gs.day_count 
 
 let extract_stage rd = 
     match rd.state with 
-        | Lobby ls -> "Lobby"
+        | Lobby _ -> "Lobby"
         | Game gs -> string_of_stage gs.stage 
 
 let extract_players rd = 
@@ -469,7 +478,7 @@ let extract_announce rd last =
     in 
     
     match rd.state with 
-        | Lobby ls -> [] (* currently there are no announcements in the lobby *)
+        | Lobby _ -> [] (* currently there are no announcements in the lobby *)
         | Game gs -> List.fold ~init:[] ~f:g_announce gs.announcement_history
 
 let extract_messages rd last = 
@@ -483,14 +492,16 @@ let refresh_status ab =
     let {id; rd; cd} = ab in 
     let rec update = function 
         | [] -> [] 
-        | (pn,time)::t when pn = cd.player_id -> (pn,Time.now ())::update t
+        | (pn,_)::t when pn = cd.player_id -> (pn,Time.now ())::update t
         | h::t -> h::update t 
     in 
     Hashtbl.set rooms ~key:id ~data:{rd with last_updated = update rd.last_updated}; 
     ab 
 
 let extract_status ab = 
-    let {id; rd; cd} = ab in 
+    let rd = ab.rd in 
+    let cd = ab.cd in 
+
     let last = match cd.arguments with 
                 | [] -> raise (Action_Error (respond `Bad_request "Must specify initial timestamp"))
                 | h::_ -> Time.of_string_fix_proto `Utc h 
@@ -523,7 +534,9 @@ let room_status _ req body =
 
     Body.to_string body >>= get_status
     
-(* ------------------------------------------------------------- *)
+(* ----------------------------------------------------- *)
+(* - Server Setup: *)
+
 let handler ~body:body conn req =
     let uri = Cohttp.Request.uri req in 
     let verb = Cohttp.Request.meth req in 
