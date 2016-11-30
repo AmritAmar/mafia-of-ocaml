@@ -4,7 +4,9 @@ let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
 let alive = [ "Clarkson" ; "Myers" ]
 
-let test_a = ["example announcement"]
+let test_a = [("ALL","example announcement");
+("MAFIA","example announcement for only mafia");
+("ME","this is an announcement that only I can see")]
 
 let test_c = [("Myers","I think you are the mafia");
 ("Clarkson","I don't think I am the mafia")]
@@ -299,11 +301,31 @@ let rec print_chat x y style1 style2 endline n1 n2 lst =
     printer (x+n1+1) y style2 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
 
+let rec print_a x y endline n lst skip =
+  match lst with
+  | [] -> ()
+  | h::t -> let len = List.length (split_string n (snd h)) in
+            if String.uppercase_ascii (fst h) = "ALL" then
+              (print_object x y [white] endline (split_string n (snd h));
+              print_a x (y+len+skip) endline n t skip)
+
+            else if String.uppercase_ascii (fst h) = "INNOCENT" then
+              (print_object x y [green] endline (split_string n (snd h));
+              print_a x (y+len+skip) endline n t skip)
+
+            else if String.uppercase_ascii (fst h) = "MAFIA" then
+              (print_object x y [red] endline (split_string n (snd h));
+              print_a x (y+len+skip) endline n t skip)
+
+            else if String.uppercase_ascii (fst h) = "ME" then
+              (print_object x y [cyan] endline (split_string n (snd h));
+              print_a x (y+len+skip) endline n t skip)
+
 
 let update_announcements a =
   save_cursor();
   erase_box 68 8 25 27;
-  print_list 68 8 [cyan] 35 25 a 2;
+  print_a 68 8 35 25 a 2;
   restore_cursor();
   ()
 
@@ -319,8 +341,14 @@ let update_game_state day game_stage alive dead =
   erase_box 12 3 4 1;
   erase_box 8 6 11 1;
   erase_box 21 5 33 7;
-  print_object 12 3 [blue;Bold] 12 [string_of_int day];
-  print_object 8 6 [magenta;Bold] 12 [game_stage];
+  if day >= 0 then print_object 12 3 [blue;Bold] 12 [string_of_int day];
+  if String.uppercase_ascii game_stage = "LOBBY" then
+    (print_object 8 5 [yellow] screen_height ["You are now";"in the"];
+    print_object 8 7 [magenta;Bold] 12 [game_stage])
+  else
+    (print_object 8 5 [yellow] screen_height ["It is"];
+    print_object 8 7 [yellow] screen_height ["time"];
+    print_object 8 6 [magenta;Bold] 12 [game_stage]);
   print_list 23 5 [green] 12 20 alive 0;
   print_list 40 5 [red] 12 20 dead 0;
   restore_cursor();
@@ -346,8 +374,6 @@ let show_state_and_chat () =
   print_object 1 1 [yellow] screen_height game_state;
   print_object 3 14 [blue] screen_height chat_log;
   print_object 8 3 [Bold;yellow] screen_height ["DAY"];
-  print_object 8 5 [yellow] screen_height ["It is"];
-  print_object 8 7 [yellow] screen_height ["time"];
   print_object 23 3 [Bold;yellow] screen_height ["ALIVE"];
   print_object 40 3 [Bold;yellow] screen_height ["DEAD"];
   print_object 40 15 [Bold;white;on_blue] screen_height [" CHAT LOG "];
@@ -365,6 +391,6 @@ let new_prompt () =
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
-  update_game_state 20 "VOTING" alive dead;
-  new_prompt (); *)
-
+  update_game_state (-1) "VOTING" alive dead;
+  new_prompt ();
+ *)
