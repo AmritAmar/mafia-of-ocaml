@@ -25,6 +25,8 @@ type room_data = {
 type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
 
+let reserved_names = ["All";"Innocent";"Mafia";"Player";"Me"]
+
 let rooms = String.Table.create () 
 
 (* [respond code msg] is an alias for Server.respond_with_string *)
@@ -236,20 +238,24 @@ let load_room req cd =
             let room_data = Hashtbl.find_exn rooms s in {id = s; rd = room_data; cd = cd}
 
 let valid_id ab = 
-    let id = ab.cd.player_id in 
+    let player_id = ab.cd.player_id in 
     let players = ab.rd.last_updated in 
     
+    let reserved = List.mem reserved_names player_id in 
+
     let in_use = 
         List.fold ~init:false 
-                  ~f:(fun acc (n,_) -> (n = id) || acc) 
+                  ~f:(fun acc (n,_) -> (n = player_id) || acc) 
                   players in 
     
-    let too_long = String.length id >= 15 in 
+    let too_long = String.length player_id >= 15 in 
     
-    if (in_use) 
-        then raise (Action_Error (respond `Bad_request "Player name in use."))
+    if (reserved)
+        then raise (Action_Error (respond `Bad_request "Chosen name is a reserved keyword."))
+    else if (in_use) 
+        then raise (Action_Error (respond `Bad_request "Chosen name in use."))
     else if (too_long) 
-        then raise (Action_Error (respond `Bad_request "Player name too long."))
+        then raise (Action_Error (respond `Bad_request "Chosen name too long."))
     else ab 
 
 let lobby_join ls cd = 
@@ -471,15 +477,32 @@ let extract_players rd =
         | Lobby ls -> List.fold ~init: [] ~f: l_players ls.players
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
-let extract_announce rd last = 
-    let g_announce acc (posted,a) = 
-        if last < posted then a :: acc
-                        else acc 
+let extract_announce cd rd last =     
+    
+    let format_announce (a_t, msg) = 
+        let audience = match a_t with 
+                        | All -> "All"
+                        | Innocents -> "Innocent" 
+                        | Mafias -> "Mafia"
+                        | Player s when cd.player_id = s -> "Me"
+                        | Player _ -> failwith "rep_not_ok" 
+
+        in 
+        (audience,msg)
+    in
+
+    let get_announce gs = 
+        fun acc (posted,an) ->
+            let new_msg = last < posted in 
+            let intended_for = can_recieve gs cd.player_id an in 
+            if new_msg && intended_for 
+                then (format_announce an) :: acc
+                else acc 
     in 
     
     match rd.state with 
         | Lobby _ -> [] (* currently there are no announcements in the lobby *)
-        | Game gs -> List.fold ~init:[] ~f:g_announce gs.announcement_history
+        | Game gs -> List.fold ~init:[] ~f:(get_announce gs) gs.announcement_history
 
 let extract_messages rd last = 
     let messages acc (posted,pn,msg) = 
@@ -510,7 +533,7 @@ let extract_status ab =
         day_count = extract_days rd;
         game_stage = extract_stage rd; 
         active_players = extract_players rd; 
-        new_announcements = extract_announce rd last;
+        new_announcements = extract_announce cd rd last;
         new_messages = extract_messages rd last;
         timestamp = Time.to_string_fix_proto `Utc (Time.now ());
     }

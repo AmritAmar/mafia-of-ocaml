@@ -7,7 +7,7 @@ type player_name = string
 type chat_message = string
 
 type announcement = announce_type * string 
-and announce_type = All | Innocent | Mafia | Player of player_name 
+and announce_type = All | Innocents | Mafias | Player of player_name 
 
 type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
@@ -178,6 +178,13 @@ let can_vote state player =
     | Voting -> is_alive player state
     | Night -> is_mafia player state
     | _ -> false
+
+let can_recieve state player (a_t,_) = 
+    match a_t with 
+        | All -> true 
+        | Innocents -> not (is_mafia player state)
+        | Mafias -> is_mafia player state 
+        | Player s -> player = s 
 
 (** [disconnect_player] disconencts player given game state and player name
  *)
