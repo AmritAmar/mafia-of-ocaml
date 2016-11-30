@@ -3,7 +3,10 @@ open Core
 
 type player_name = string
 type chat_message = string
-type announcement = string
+
+type announcement = announce_type * string 
+and announce_type = All | Innocent | Mafia | Player of player_name 
+
 type timestamp = Core.Time.t
 type role = Innocent | Mafia | Dead
 type game_stage = Night | Discussion | Voting | Game_Over
