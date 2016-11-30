@@ -6,9 +6,15 @@ open Data
 let id_lst = ["Rachel";"Tyler";"Michael";"Irene"]
 let plr_lst = [("Irene",Innocent);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
 let kill_irene = [("Irene",Dead);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
+let kill_tyler = [("Irene",Innocent);("Michael",Innocent);("Tyler",Dead);("Rachel",Mafia)]
+
 let init_state = {day_count = 0; stage = Voting; 
         players = plr_lst;  
         announcement_history = []}
+let state2 = {day_count = 1; stage = Discussion; 
+        players = kill_tyler;  
+        announcement_history = [(Time.now (),
+             "Good Morning! Last night, Tyler was killed in their sleep by the Mafia :( RIP.")]}
 let vote_kill_irene = handle_exec_vote init_state ["Irene";"Irene";"Rachel";"Michael"]
 let vote_kill_irene2 = handle_exec_vote init_state ["Irene";"Rachel";"Michael";"Irene"]
 let vote_kill_irene3 = handle_exec_vote init_state ["Irene";"Michael";"Michael";"Irene"]
@@ -43,8 +49,11 @@ let game_tests = [
   	(vote_kill_irene3.players)); (* ambiguous!!! *)
   "latest_votes" >:: (fun _ -> assert_equal latest_client_json1
     ((latest_votes [] client_json1)));
-  "night_to_disc" >:: (fun _ -> assert_equal (state)
-    (night_to_disc state client_json list));
+  "night_to_disc" >:: (fun _ -> assert_equal (state2.day_count)
+    ((night_to_disc init_state client_json1).day_count));
+  "night_to_disc1" >:: (fun _ -> assert_equal (state2.announcement_history |> List.hd |> snd)
+  	~printer:(fun x -> x)
+    ((night_to_disc init_state client_json1).announcement_history |> List.hd |> snd));
 
 ]
 
