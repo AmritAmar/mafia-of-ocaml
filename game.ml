@@ -167,6 +167,7 @@ let string_of_stage = function
 
 let can_chat state player =
     match state.stage with
+    | Game_Over -> true 
     | Discussion -> is_alive player state
     | Night -> is_mafia player state
     | _ -> false
@@ -191,7 +192,7 @@ let disconnect_player state player =
 let time_span state = 
     match state.stage with
     | Voting -> Core.Time.Span.minute
-    | Game_Over -> Core.Time.Span.minute
+    | Game_Over -> Core.Time.Span.of_sec 30.
     | Discussion -> Core.Time.Span.minute
     | Night -> Core.Time.Span.minute
 

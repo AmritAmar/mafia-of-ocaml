@@ -81,7 +81,7 @@ let _ =
                    dead_players=[];
                    timestamp="";
                    msgs=[];
-                   announcements=["Welcome to mafia_of_ocaml!"]; }
+                   announcements=[("ALL","Welcome to mafia_of_ocaml!")]; }
   in
   let rec get_input ?(commands=[]) () =
     new_prompt ();
@@ -116,14 +116,15 @@ let _ =
   show_banner ();
   upon (
     server_verify (fun () ->
-      add_announcements client_s ["Type \"join [room_id]\" to join an existing "
-                                  ^ "room or \"create [room_id]\" to create a "
-                                  ^ "new room."];
+      add_announcements client_s [("ALL","Type \"join [room_id]\" to join an "
+                                         ^ "existing room or \"create "
+                                         ^ "[room_id]\" to create a new room.")
+                                 ];
       update_announcements client_s.announcements;
       let cmd,room = get_input ~commands:["join";"create"] () in
       client_s.room_id <- room;
-      add_announcements client_s ["Please enter a username that is <= 15 "
-                                  ^ "characters long."];
+      add_announcements client_s [("ALL","Please enter a username that is <= "
+                                         ^ "15 characters long.")];
       update_announcements client_s.announcements;
       let _,user = get_input () in
       client_s.player_id <- user;
@@ -132,7 +133,7 @@ let _ =
            (make_uri server_url "create_room" ~q_params:[("room_id",room)] ()) ()
            >>= fun (code,body) -> 
            if code <> 200
-           then (add_announcements client_s [body];
+           then (add_announcements client_s [("ALL",body)];
                 update_announcements client_s.announcements;
                 return (code,body))
            else (send_post
@@ -147,8 +148,10 @@ let _ =
   )
   (fun (_, body) ->
     client_s.timestamp <- body; (* initial timestamp *)
-    add_announcements client_s [("Your player ID is " ^ client_s.player_id);
-                                ("Joined lobby for room " ^ client_s.room_id);
+    add_announcements client_s [("ALL","Your player ID is "
+                                       ^ client_s.player_id);
+                                ("ALL","Joined lobby for room "
+                                       ^ client_s.room_id);
                                ];
     show_state_and_chat ();
     update_announcements client_s.announcements;
@@ -157,6 +160,7 @@ let _ =
     (* update request loop *)
     let rec server_update_loop () =
       let get_update =
+        after (Core.Std.sec 0.5) >>= fun _ ->
         send_post
           (make_uri server_url ("room_status") ~q_params:[("room_id",room)] ())
           ~data:{ player_id=user;
@@ -174,11 +178,7 @@ let _ =
                                               client_s.dead_players;
           if new_msgs then update_chat client_s.msgs;
           if new_a then update_announcements client_s.announcements;
-          if client_s.game_stage = "GAME_OVER"
-          then
-            (add_announcements client_s ["Thanks for playing mafia_of_ocaml!"];
-             update_announcements client_s.announcements;
-             Pervasives.exit 0));
+        );
         server_update_loop ()
       )
     in
@@ -190,7 +190,7 @@ let _ =
           (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
           ~data:{player_id=user; player_action=cmd; arguments=[args]}
           ())
-        (fun (_,body) -> add_announcements client_s [body];
+        (fun (_,body) -> add_announcements client_s [("ALL",body)];
                             update_announcements client_s.announcements;
                             user_input_loop ())
       )
