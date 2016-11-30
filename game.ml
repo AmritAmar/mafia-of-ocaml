@@ -109,20 +109,22 @@ let rec latest_votes latest votes =
 
 (**
  * Returns the most voted person *)
-let rec most_voted max_num curr_num max_vote votes = 
+let rec most_voted max_vote max_count vote count votes = 
     match votes with 
-    [] -> max_vote
-    | hd::tl -> if hd = max_vote then most_voted (max_num+1) (curr_num+1) max_vote tl
-        else if curr_num = max_num then most_voted (curr_num+1) (curr_num+1) hd tl
-        else most_voted max_num (curr_num+1) max_vote tl
+    [] -> if max_count < count then vote else max_vote
+    | hd::tl -> if vote = hd then most_voted max_vote max_count hd (count+1) tl
+        else if count > max_count then most_voted vote count hd 1 tl
+        else most_voted max_vote max_count hd 1 tl
 
 let night_to_disc st updates = 
     (* Only adds to list_killed if player is mafia*)
-    let victim = List.fold_left 
+    let victim_list = List.fold_left 
             (fun a x -> if(is_mafia x.player_id st && x.player_action = "vote")
              then x::a else a)
             [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
-            |> List.concat |> List.sort String.compare |> most_voted 0 0 "" in
+            |> List.concat |> List.sort String.compare in
+    let victim = match victim_list with [] -> ""
+    | hd::tl -> most_voted hd 1 hd 1 tl in
     let updated_players = kill_player victim st.players in
     {day_count = st.day_count+1; stage = Discussion; 
         players = updated_players; 
