@@ -180,7 +180,6 @@ let transition_beat id now =
 let server_beat _ = 
     let now = Time.now () in 
     eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
-    eprintf "Hashtbl.keys: %d\n" (List.length (Hashtbl.keys rooms)); 
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now); (*check heart_beat*)
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
     ()
@@ -188,6 +187,13 @@ let server_beat _ =
 let daemon_action conn req body = 
     server_beat ();
     respond `OK "Done."
+
+let rec run_daemon () =
+  let helper =
+    return (server_beat ()) >>= fun _ ->
+    after (Core.Std.sec 5.0)
+  in
+    upon helper (fun _ -> run_daemon ())
 
 (* room creation logic *)
 (* TODO: Rewrite Using Exceptions *)
@@ -507,8 +513,6 @@ let room_status _ req body =
         try 
             let cd = decode_cjson body in 
             let ab = load_room req cd |> in_room in
-             (* eprintf "(%s): Player: %s Requesting Update\n"
-                (ab.id )(cd.player_id);*)
             match cd.player_action with 
                 | "get_status" -> ab |> refresh_status |> extract_status |> write_status
                 | _ -> respond `Bad_request "Invalid for this endpoint."
@@ -536,6 +540,7 @@ let start_server port () =
     eprintf "Starting mafia_of_ocaml...\n"; 
     eprintf "~-~-~-~-~-~-~~-~-~-~-~-~-~~-~-~-~-~-~-~~-~-~-~-~-~-~\n";
     eprintf "Listening for HTTP on port %d\n" port; 
+    run_daemon ();
     Cohttp_async.Server.create ~on_handler_error:`Raise 
         (Tcp.on_port port) handler
     >>= fun _ -> Deferred.never ()
