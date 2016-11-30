@@ -547,9 +547,7 @@ let room_status _ req body =
         try 
             let cd = decode_cjson body in 
             let ab = load_room req cd |> in_room in
-            match cd.player_action with 
-                | "get_status" -> ab |> refresh_status |> extract_status |> write_status
-                | _ -> respond `Bad_request "Invalid for this endpoint."
+            ab |> refresh_status |> extract_status |> write_status
         with
             | Action_Error response -> response 
             | _ -> respond `Bad_request "Failure."
