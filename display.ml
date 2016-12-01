@@ -335,6 +335,8 @@ let update_game_state day game_stage alive dead =
   if String.uppercase_ascii game_stage = "LOBBY" then
     (print_object 8 5 [yellow] screen_height ["You are now";"in the"];
     print_object 8 7 [magenta;Bold] 12 [game_stage])
+  else if String.uppercase_ascii game_stage = "GAME OVER" then
+    print_object 8 5 [magenta;Bold] 12 [game_stage]
   else
     (print_object 8 5 [yellow] screen_height ["It is"];
     print_object 8 7 [yellow] screen_height ["time"];
@@ -376,11 +378,11 @@ let new_prompt () =
   print_string [] "> "
 
 
-let () =
+(* let () =
   show_banner ();
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
-  update_game_state (-1) "LOBBY" alive dead;
+  update_game_state (-1) "Game Over" alive dead;
   new_prompt ();
-
+ *)
