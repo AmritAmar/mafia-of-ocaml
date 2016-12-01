@@ -14,8 +14,8 @@ type server_state =
    | Lobby of lobby_state 
    | Game of game_state  
 
-type chat_message = 
-    (target * string * string)
+type chat_message = (channel * player_name * string)
+and channel = General | Mafia 
 
 type room_data = {
     state: server_state;  
@@ -339,11 +339,10 @@ let can_chat ab =
 (* [write_chat ab] adds the client's chat message into the chat buffer and 
  * returns an 'OK response *)
 
-let write_chat {id; rd; cd} = 
+let write_chat channel {id; rd; cd} = 
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
-    (* TODO : Check who the message is for *)
-    let addition = ((Time.now ()), (All, pn, msg)) in 
+    let addition = ((Time.now ()), (channel, pn, msg)) in 
     Hashtbl.set rooms ~key:id ~data:{rd with chat_buffer = (addition :: rd.chat_buffer)};
     respond `OK "Done."
 
@@ -358,7 +357,7 @@ let write_ready {id; rd; cd} =
     in 
     
     match rd.state with 
-        | Game _ -> raise (Action_Error (respond`Bad_request "Cannot Ready in Game."))
+        | Game _ -> raise (Action_Error (respond `Bad_request "Cannot Ready in Game."))
         | Lobby ls ->
             let pl' = List.fold ~init:[] ~f:update_players ls.players in 
             Hashtbl.set rooms ~key:id ~data:{rd with state = Lobby {ls with players = pl'}}; 
@@ -445,7 +444,8 @@ let player_action _ req body =
                 (ab.id )(cd.player_id) (cd.player_action )
                 (List.fold ~init:"" ~f:(fun acc x -> x ^ ";" ^ acc) cd.arguments);
             match cd.player_action with 
-                | "chat" -> ab |> can_chat |> write_chat 
+                | "chat" -> ab |> can_chat |> write_chat General
+                | "mafia_chat" -> ab |> can_chat |> write_chat Mafia
                 | "ready" -> ab |> write_ready  
                 | "start" -> ab |> is_admin |> all_ready |> write_game 
                 | "vote" -> ab |> can_vote |> write_vote 
@@ -481,31 +481,25 @@ let extract_players rd =
         | Lobby ls -> List.fold ~init: [] ~f: l_players ls.players
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
-
-let hasnt_recieved last posted = last < posted
-
-let intended_for rd cd target = 
-    match rd.state with 
-        | Lobby l -> true (*no secret chat in lobby *)
-        | Game gs -> can_recieve gs cd.player_id target
-
-let format_target player_id target = 
+let extract_announce cd rd last =     
+    
+    let format_target player_id target = 
      match target with 
         | All -> "All"
         | Innocents -> "Innocent" 
         | Mafias -> "Mafia"
         | Player s when player_id = s -> "Me"
         | Player _ -> failwith "rep_not_ok" 
+    in 
 
-let extract_announce cd rd last =     
     let format_announce (target, msg) = 
         (format_target cd.player_id target ,msg)
     in
 
     let get_announce gs = 
         fun acc (posted,(target,a)) ->
-            let new_msg = hasnt_recieved last posted in 
-            let intended = intended_for rd cd target in 
+            let new_msg = last < posted in 
+            let intended = can_recieve gs cd.player_id target in 
             if new_msg && intended 
                 then (format_announce (target,a)) :: acc
                 else acc 
@@ -517,15 +511,26 @@ let extract_announce cd rd last =
 
 let extract_messages rd cd last = 
     
-    let format_message (target, pn, msg) = 
-        (format_target pn target, pn, msg)
+    let format_message (channel, pn, msg) = 
+        let dir = match channel with
+                    | General -> "All"
+                    | Mafia -> "Mafia"
+        in 
+        (dir, pn, msg)
     in
 
-    let get_messages acc (posted,(target,pn,msg)) = 
-        let new_msg = hasnt_recieved last posted in 
-        let intended = intended_for rd cd target in 
+    let get_messages acc (posted,(channel,pn,msg)) = 
+        let new_msg = last < posted in 
+        let intended = 
+            match rd.state, channel with 
+                | _, General -> true 
+                | Game gs, Mafia 
+                    when (is_mafia cd.player_id gs) -> true 
+                | _, _ -> false 
+        in 
+
         if new_msg && intended 
-            then format_message (target,pn,msg)::acc
+            then format_message (channel,pn,msg)::acc
             else acc 
     in 
 
@@ -554,7 +559,7 @@ let extract_status ab =
         game_stage = extract_stage rd; 
         active_players = extract_players rd; 
         new_announcements = extract_announce cd rd last;
-        new_messages = extract_messages rd last;
+        new_messages = extract_messages rd cd last;
         timestamp = Time.to_string_fix_proto `Utc (Time.now ());
     }
     

@@ -28,7 +28,7 @@ let encode_sjson sj =
     ("active_players", `List (to_json_list sj.active_players));
     ("new_announcements", `List (List.map
                                  (fun (typ,txt) -> `Assoc[("type",`String typ);
-                                                          ("txt",`String txt)])
+                                                          ("text",`String txt)])
                                  sj.new_announcements));
     ("new_messages", `List (List.map
                             (fun (t,p,msg) -> `Assoc[("target",`String t);
