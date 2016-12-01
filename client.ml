@@ -86,10 +86,10 @@ let rec get_input_async f =
         if (is_in first_word ["chat"; "ready"; "start";
                               "vote"; "mafia-chat"; "help" ])
         then f (first_word,rest)
-        else (match client_s.announcements with
-              | (_,h)::_ when h = "Not a valid command." -> ()
-              | _ -> add_announcements client_s ["Me","Not a valid command."]);
-             get_input_async f
+        else ((match client_s.announcements with
+              | (_,h)::_ when h = "Invalid command" -> ()
+              | _ -> add_announcements client_s ["Me","Invalid command"]);
+             get_input_async f)
 
 (* Main REPL *)
 let _ =
