@@ -3,7 +3,7 @@
  * ordered by how recent the message is (most recent to least recent). Returns
  * the cursor to its position before this function was called.
  *)
-val update_chat : (string * string) list -> unit
+val update_chat : (string * string * string) list -> unit
 
 (**
  * [update_game_state day game_stage alive dead] will update the display of
