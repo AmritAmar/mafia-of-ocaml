@@ -49,6 +49,10 @@ val can_vote : game_state -> player_name -> bool
  * game state. *)
 val can_recieve : game_state -> player_name -> target -> bool 
 
+(** returns whether or not player is a mafia
+ *)
+val is_mafia : player_name -> game_state -> bool 
+
 (** [disconnect_player] disconencts player given game state and player name
  *)
 val disconnect_player : game_state -> player_name -> game_state
