@@ -5,7 +5,7 @@ type server_json = {
   game_stage: string;
   active_players: string list;
   new_announcements: (string * string) list;
-  new_messages: (string * string) list;
+  new_messages: (string * string * string) list;
   timestamp: string;
 }
 

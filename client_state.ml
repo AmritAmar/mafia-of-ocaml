@@ -8,7 +8,7 @@ type client_state = {
   mutable alive_players: string list;
   mutable dead_players: string list;
   mutable timestamp: string;
-  mutable msgs: (string * string) list;
+  mutable msgs: (string * string * string) list;
   mutable announcements: (string * string) list;
 }
 
