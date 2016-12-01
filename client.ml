@@ -52,6 +52,24 @@ let rec is_in n = function
   | []   -> false
   | h::t -> if h = n then true else is_in n t
 
+let rec get_input ?(commands=[]) () =
+  new_prompt ();
+  let input = Pervasives.read_line () in
+  let rec found_in s = function
+    | [] -> false
+    | h::t -> if s = h then true else found_in s t
+  in
+  if input = "" then get_input ~commands:commands ()
+  else if commands = [] then ("",input)
+  else
+    let first_word,rest = match Str.(bounded_split (regexp " ") input 2) with
+                          | h::[]    -> (String.lowercase_ascii h,"")
+                          | h::t::[] -> (String.lowercase_ascii h,t)
+                          | _        -> ("","") (* not possible *)
+    in
+    if found_in first_word commands then (first_word,rest)
+    else get_input ~commands:commands ()
+
 (*
  * The following code is from the async GitHub repository and has been
  * modified for our use-case.
@@ -94,31 +112,13 @@ let rec get_input_async f =
               | _ -> add_announcements client_s ["Me","Invalid command"]);
              get_input_async f)
 
+let rec server_verify f =
+  f () >>= fun (code,body) ->
+  if code = 200 then return (code,body)
+  else (print_endline body; server_verify f)
+
 (* Main REPL *)
 let _ =
-  let rec get_input ?(commands=[]) () =
-    new_prompt ();
-    let input = Pervasives.read_line () in
-    let rec found_in s = function
-      | [] -> false
-      | h::t -> if s = h then true else found_in s t
-    in
-    if input = "" then get_input ~commands:commands ()
-    else if commands = [] then ("",input)
-    else
-      let first_word,rest = match Str.(bounded_split (regexp " ") input 2) with
-                            | h::[]    -> (String.lowercase_ascii h,"")
-                            | h::t::[] -> (String.lowercase_ascii h,t)
-                            | _        -> ("","") (* not possible *)
-      in
-      if found_in first_word commands then (first_word,rest)
-      else get_input ~commands:commands ()
-  in
-  let rec server_verify f =
-    f () >>= fun (code,body) ->
-    if code = 200 then return (code,body)
-    else (print_endline body; server_verify f)
-  in
   let server_url = if Array.length Sys.argv < 2
                    then Pervasives.(
                         print_endline "Usage: make client URL=[server URL]";
