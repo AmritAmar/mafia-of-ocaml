@@ -11,7 +11,7 @@ open Cohttp_async
  * and query parameters into a Uri.t instance. The query parameters are
  * optional.
  *)
-val make_uri : string -> string -> ?q_params:(string * string) list -> unit -> Uri.t
+val make_uri : string -> string -> string -> Uri.t
 
 (**
  * [send_get url f] will send a GET request to the URL specified by [url], parse

@@ -14,10 +14,14 @@ let help_string =
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
   
-let make_uri base_url path ?(q_params=[]) () =
-  let new_uri = Uri.of_string base_url in
+let make_uri base_url path room =
+  let new_uri = Uri.of_string
+                (if Str.string_match (Str.regexp "^http://") base_url 0
+                 then base_url
+                 else "http://" ^ base_url)
+  in
   let new_uri = Uri.with_path new_uri path in
-  Uri.add_query_params' new_uri q_params
+  Uri.add_query_params' new_uri [("room_id",room)]
 
 let send_get uri =
   Client.get uri >>= fun (resp,body) ->
@@ -142,21 +146,19 @@ let _ =
       let _,user = get_input () in
       client_s.player_id <- user;
       if cmd = "create"
-      then (send_post
-           (make_uri server_url "create_room" ~q_params:[("room_id",room)] ()) ()
+      then (send_post (make_uri server_url "create_room" room) ()
            >>= fun (code,body) -> 
            if code <> 200
            then (add_announcements client_s [("Me",body)];
                 update_announcements client_s.announcements;
                 return (code,body))
            else (send_post
-                (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
+                (make_uri server_url "join_room" room)
                 ~data:{player_id=user; player_action="join"; arguments=[]}
                 ()))
-      else (send_post
-           (make_uri server_url "join_room" ~q_params:[("room_id",room)] ())
-           ~data:{player_id=user; player_action="join"; arguments=[]}
-           ())
+      else (send_post (make_uri server_url "join_room" room)
+                      ~data:{player_id=user; player_action="join"; arguments=[]}
+                      ())
     )
   )
   (fun (_, body) ->
@@ -174,12 +176,11 @@ let _ =
     let rec server_update_loop () =
       let get_update =
         after (Core.Std.sec 0.5) >>= fun _ ->
-        send_post
-          (make_uri server_url ("room_status") ~q_params:[("room_id",room)] ())
-          ~data:{ player_id=user;
-                  player_action="get_status";
-                  arguments=[client_s.timestamp] }
-          ()
+        send_post (make_uri server_url "room_status" room)
+                  ~data:{ player_id=user;
+                          player_action="get_status";
+                          arguments=[client_s.timestamp] }
+                  ()
       in
       upon get_update (fun (code,body) -> 
         (if code = 200 then
@@ -201,9 +202,7 @@ let _ =
         if cmd = "help" then (add_announcements client_s [("Me",help_string)];
                               update_announcements client_s.announcements;
                               user_input_loop ())
-        else upon (send_post (make_uri server_url ("player_action")
-                             ~q_params:[("room_id",room)]
-                             ())
+        else upon (send_post (make_uri server_url "player_action" room)
                   ~data:{player_id=user; player_action=cmd; arguments=[args]}
                   ())
         (fun (_,body) -> add_announcements client_s [("Me",body)];
