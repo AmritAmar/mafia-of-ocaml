@@ -9,7 +9,8 @@ let test_a = [("ALL","example announcement");
 ("ME","this is an announcement that only I can see")]
 
 let test_c = [("All", "Myers","I think you are the mafia");
-("Mafia","Clarkson","I don't think I am the mafia")]
+("Mafia","Clarkson","I don't think I am the mafia");
+("all","Myers","cool")]
 
 let scroll = [
 "                                               .---.";
@@ -329,7 +330,7 @@ let update_chat log =
 let update_game_state day game_stage alive dead =
   save_cursor();
   erase_box 12 3 4 1;
-  erase_box 8 6 11 1;
+  erase_box 8 5 11 3;
   erase_box 21 5 33 7;
   if day >= 0 then print_object 12 3 [blue;Bold] 12 [string_of_int day];
   if String.uppercase_ascii game_stage = "LOBBY" then
@@ -377,12 +378,14 @@ let new_prompt () =
   erase Eol;
   print_string [] "> "
 
-
-(* let () =
+(*
+let () =
   show_banner ();
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
+  update_game_state (-1) "Lobby" alive dead;
   update_game_state (-1) "Game Over" alive dead;
   new_prompt ();
+
  *)
