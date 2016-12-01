@@ -34,10 +34,26 @@ let send_post uri ?data () =
   upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
   Ivar.read new_ivar
 
+(* Start state *)
+let client_s = { player_id="";
+                 room_id="";
+                 day_count=0;
+                 game_stage="";
+                 alive_players=[];
+                 dead_players=[];
+                 timestamp="";
+                 msgs=[];
+                 announcements=[("Me","Welcome to mafia_of_ocaml!")]; }
+
 let rec is_in n = function
   | []   -> false
   | h::t -> if h = n then true else is_in n t
 
+(*
+ * The following code is from the async GitHub repository and has been
+ * modified for our use-case.
+ * https://github.com/janestreet/async/blob/master/example/cat.ml
+ *)
 let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
 let buf = Core.Std.String.create 4096
@@ -67,22 +83,16 @@ let rec get_input_async f =
                               | h::t::[] -> (String.lowercase_ascii h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (is_in first_word ["chat"; "ready"; "start"; "vote"])
+        if (is_in first_word ["chat"; "ready"; "start";
+                              "vote"; "mafia-chat"; "help" ])
         then f (first_word,rest)
-        else get_input_async f
+        else (match client_s.announcements with
+              | (_,h)::_ when h = "Not a valid command." -> ()
+              | _ -> add_announcements client_s ["Me","Not a valid command."]);
+             get_input_async f
 
 (* Main REPL *)
 let _ =
-  let client_s = { player_id="";
-                   room_id="";
-                   day_count=0;
-                   game_stage="";
-                   alive_players=[];
-                   dead_players=[];
-                   timestamp="";
-                   msgs=[];
-                   announcements=[("ALL","Welcome to mafia_of_ocaml!")]; }
-  in
   let rec get_input ?(commands=[]) () =
     new_prompt ();
     let input = Pervasives.read_line () in
@@ -116,14 +126,14 @@ let _ =
   show_banner ();
   upon (
     server_verify (fun () ->
-      add_announcements client_s [("ALL","Type \"join [room_id]\" to join an "
+      add_announcements client_s [("Me","Type \"join [room_id]\" to join an "
                                          ^ "existing room or \"create "
                                          ^ "[room_id]\" to create a new room.")
                                  ];
       update_announcements client_s.announcements;
       let cmd,room = get_input ~commands:["join";"create"] () in
       client_s.room_id <- room;
-      add_announcements client_s [("ALL","Please enter a username that is <= "
+      add_announcements client_s [("Me","Please enter a username that is <= "
                                          ^ "15 characters long.")];
       update_announcements client_s.announcements;
       let _,user = get_input () in
@@ -133,7 +143,7 @@ let _ =
            (make_uri server_url "create_room" ~q_params:[("room_id",room)] ()) ()
            >>= fun (code,body) -> 
            if code <> 200
-           then (add_announcements client_s [("ALL",body)];
+           then (add_announcements client_s [("Me",body)];
                 update_announcements client_s.announcements;
                 return (code,body))
            else (send_post
@@ -148,9 +158,9 @@ let _ =
   )
   (fun (_, body) ->
     client_s.timestamp <- body; (* initial timestamp *)
-    add_announcements client_s [("ALL","Your player ID is "
+    add_announcements client_s [("Me","Your player ID is "
                                        ^ client_s.player_id);
-                                ("ALL","Joined lobby for room "
+                                ("Me","Joined lobby for room "
                                        ^ client_s.room_id);
                                ];
     show_state_and_chat ();
@@ -190,7 +200,7 @@ let _ =
           (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
           ~data:{player_id=user; player_action=cmd; arguments=[args]}
           ())
-        (fun (_,body) -> add_announcements client_s [("ALL",body)];
+        (fun (_,body) -> add_announcements client_s [("Me",body)];
                             update_announcements client_s.announcements;
                             user_input_loop ())
       )
