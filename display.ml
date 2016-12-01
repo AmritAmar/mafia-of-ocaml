@@ -8,8 +8,8 @@ let test_a = [("ALL","example announcement");
 ("MAFIA","example announcement for only mafia");
 ("ME","this is an announcement that only I can see")]
 
-let test_c = [("Myers","I think you are the mafia");
-("Clarkson","I don't think I am the mafia")]
+let test_c = [("All", "Myers","I think you are the mafia");
+("Mafia","Clarkson","I don't think I am the mafia")]
 
 let scroll = [
 "                                               .---.";
@@ -196,22 +196,6 @@ let screen_width = 100
 
 let screen_height = 41
 
-(* let append_head str n acc =
-  acc^" "^(String.sub str 0 n)
-
-let explode s =
-  let rec exp i l =
-    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
-  exp (String.length s - 1) []
-
-let  split_body str len =
-  let rec helper w acc =
-  match w with
-  | [] ->
-  | h::t -> if
-
-in helper [] *)
-
 (* [split_string n str] inputs a string [str] and splits it into a list of
  * strings that are at most [n] characters long where n > 0.
  * precondition: n > 0
@@ -232,10 +216,7 @@ let split_string n str =
   let rec helper w acc l =
     match w with
     | [] -> l@[acc]
-    | h::t -> (* if String.length h >=n then
-      let split = split_word h n acc in
-      helper ((snd split)::t) "" (l@[acc^" "^(fst split)])
-              else  *)if (String.length h) + (String.length acc) >= n
+    | h::t -> if (String.length h) + (String.length acc) >= n
                 then helper t h (l@[acc])
               else helper t (acc^" "^h) l
   in helper w acc []
@@ -264,6 +245,7 @@ let rec print_list x y style endline n lst skip =
             print_object x y style endline (split_string n h);
             print_list x (y+len+skip) style endline n t skip
 
+
 (* [erase_box x y width height] erases everything on the screen at coordinates
  * [x],[y] spanning [width] and [height].
 *)
@@ -277,29 +259,37 @@ let erase_box x y width height =
   print_object x y [] screen_height lst;
   ()
 
-let rec printer x y style endline arr =
+let rec print_message x y style endline arr =
   match arr with
   | [] -> ()
   | h::t -> if y>endline then (set_cursor x y;
                            print_string style h;
-                           printer x (y-1) style endline t)
+                           print_message x (y-1) style endline t)
             else ()
 
+let afst (x,_,_) = x
+
+let asnd (_,y,_) = y
+
+let athrd (_,_,z) = z
 
 let rec print_chat x y style1 style2 endline n1 n2 lst =
   match lst with
   | [] -> ()
-  | h::t -> let user = split_string n1 (fst h) in
-            let chat = split_string n2 (snd h) in
+  | h::t -> let style3 = if String.uppercase_ascii (afst h) = "ALL" then style2
+                         else [red] in
+            let user = split_string n1 (asnd h) in
+            let chat = split_string n2 (athrd h) in
             let len = max (List.length user) (List.length chat) in
   if (List.length user) > (List.length chat) then
-    (printer x y style1 endline (List.rev user);
-    printer (x+n1+1) (y-len+(List.length chat)) style2 endline (List.rev chat);
+    (print_message x y style1 endline (List.rev user);
+    print_message (x+n1+1) (y-len+(List.length chat)) style3 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
   else
-    (printer x (y-len+(List.length user)) style1 endline (List.rev user);
-    printer (x+n1+1) y style2 endline (List.rev chat);
+    (print_message x (y-len+(List.length user)) style1 endline (List.rev user);
+    print_message (x+n1+1) y style3 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
+
 
 let rec print_a x y endline n lst skip =
   match lst with
@@ -386,11 +376,11 @@ let new_prompt () =
   print_string [] "> "
 
 
-(* let () =
-  (* show_banner (); *)
+let () =
+  show_banner ();
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
-  update_game_state (-1) "VOTING" alive dead;
+  update_game_state (-1) "LOBBY" alive dead;
   new_prompt ();
- *)
+
