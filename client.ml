@@ -8,6 +8,9 @@ open Cohttp_async
 
 module Fd = Unix.Fd
 
+let help_string =
+  "Available commands: ready, start, chat, vote, mafia-chat, help"
+
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
   
@@ -195,11 +198,14 @@ let _ =
     (* command loop *)
     let rec user_input_loop () =
       get_input_async (fun (cmd,args) ->
-        upon
-        (send_post
-          (make_uri server_url ("player_action") ~q_params:[("room_id",room)] ())
-          ~data:{player_id=user; player_action=cmd; arguments=[args]}
-          ())
+        if cmd = "help" then (add_announcements client_s [("Me",help_string)];
+                              update_announcements client_s.announcements;
+                              user_input_loop ())
+        else upon (send_post (make_uri server_url ("player_action")
+                             ~q_params:[("room_id",room)]
+                             ())
+                  ~data:{player_id=user; player_action=cmd; arguments=[args]}
+                  ())
         (fun (_,body) -> add_announcements client_s [("Me",body)];
                             update_announcements client_s.announcements;
                             user_input_loop ())
