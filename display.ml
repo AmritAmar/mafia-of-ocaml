@@ -2,7 +2,7 @@ open ANSITerminal
 
 let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
-let alive = [ "Clarkson" ; "Myers" ]
+let alive = [ "Clarkson" ; "Myers"; "Myers" ]
 
 let test_a = [("ALL","example announcement");
 ("MAFIA","example announcement for only mafia");
@@ -197,12 +197,36 @@ let screen_width = 100
 
 let screen_height = 41
 
+let explode s =
+  let rec expl i l =
+    if i < 0 then l else
+    expl (i - 1) (s.[i] :: l) in
+  expl (String.length s - 1) []
+
+let split_word n str prevacc =
+  let charlist = explode str in
+  let rec helper i lst s acc =
+  match lst with
+    | [] -> acc@[s]
+    | h::t when i=0 -> helper n t "" (acc@[s])
+    | h::t -> helper (i-1) t (s^(Char.escaped h)) acc
+  in
+  if prevacc = "" then
+    helper n charlist "" []
+  else
+    helper (n-String.length prevacc-1) charlist (prevacc^" ") []
+
+
 (* [split_string n str] inputs a string [str] and splits it into a list of
  * strings that are at most [n] characters long where n > 0.
  * precondition: n > 0
 *)
 let split_string n str =
-  let word_list = Str.split (Str.regexp "[ \t\n]+") str in
+  let word_list =
+    match Str.split (Str.regexp "[ \t\n]+") str with
+    | [] -> []
+    | h::t -> if String.length h > n then (split_word n h "")@t
+              else h::t in
 
   let w =
     match word_list with
@@ -217,8 +241,11 @@ let split_string n str =
   let rec helper w acc l =
     match w with
     | [] -> l@[acc]
-    | h::t -> if (String.length h) + (String.length acc) >= n
+    | h::t -> if String.length h > n then helper ((split_word n h acc)@t) "" l
+              else if (String.length h) + (String.length acc) >= n && acc <> ""
                 then helper t h (l@[acc])
+              else if (String.length h) + (String.length acc) >= n && acc = ""
+                then helper t h l
               else helper t (acc^" "^h) l
   in helper w acc []
 
@@ -284,11 +311,11 @@ let rec print_chat x y style1 style2 endline n1 n2 lst =
             let len = max (List.length user) (List.length chat) in
   if (List.length user) > (List.length chat) then
     (print_message x y style1 endline (List.rev user);
-    print_message (x+n1+1) (y-len+(List.length chat)) style3 endline (List.rev chat);
+    print_message (x+n1+2) (y-len+(List.length chat)) style3 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
   else
     (print_message x (y-len+(List.length user)) style1 endline (List.rev user);
-    print_message (x+n1+1) y style3 endline (List.rev chat);
+    print_message (x+n1+2) y style3 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
 
 
@@ -312,6 +339,18 @@ let rec print_a x y endline n lst skip =
               (print_object x y [cyan] endline (split_string n (snd h));
               print_a x (y+len+skip) endline n t skip)
 
+let remove_elt e l =
+  let rec go l acc = match l with
+    | [] -> List.rev acc
+    | x::xs when e = x -> go xs acc
+    | x::xs -> go xs (x::acc)
+  in go l []
+
+let remove_duplicates l =
+  let rec go l acc = match l with
+    | [] -> List.rev acc
+    | x :: xs -> go (remove_elt x xs) (x::acc)
+  in go l []
 
 let update_announcements a =
   save_cursor();
@@ -323,7 +362,7 @@ let update_announcements a =
 let update_chat log =
   save_cursor();
   erase_box 8 17 47 20;
-  print_chat 8 36 [yellow] [cyan] 16 10 36 log;
+  print_chat 8 36 [yellow] [cyan] 16 10 35 log;
   restore_cursor();
   ()
 
@@ -335,19 +374,26 @@ let update_game_state day game_stage alive dead =
   if day >= 0 then print_object 12 3 [blue;Bold] 12 [string_of_int day];
   if String.uppercase_ascii game_stage = "LOBBY" then
     (print_object 8 5 [yellow] screen_height ["You are now";"in the"];
-    print_object 8 7 [magenta;Bold] 12 [game_stage])
+    print_object 8 7 [magenta;Bold] 12 [game_stage];
+    erase_box 23 3 30 1;
+    print_object 23 3 [Bold;yellow] screen_height ["CONNECTED"];)
   else if String.uppercase_ascii game_stage = "GAME OVER" then
     (print_object 8 5 [magenta;Bold] 12 [game_stage];
-    print_list 23 5 [green] 12 20 alive 0;
-    print_list 40 5 [red] 12 20 dead 0)
+    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0)
   else
     (print_object 8 5 [yellow] screen_height ["It is"];
     print_object 8 7 [yellow] screen_height ["time"];
     print_object 8 6 [magenta;Bold] 12 [game_stage];
-    print_list 23 5 [green] 12 20 alive 0;
-    print_list 40 5 [red] 12 20 dead 0);
+    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0);
+  print_list 23 5 [green] 12 20 (remove_duplicates alive) 0;
   restore_cursor();
   ()
+
+(* let lobby_scheme () =
+  erase Screen;
+
+
+let game_over_scheme () = *)
 
 let init () =
   resize screen_width screen_height;
@@ -380,8 +426,8 @@ let new_prompt () =
   erase Eol;
   print_string [] "> "
 
-
-(* let () =
+(*
+let () =
   show_banner ();
   show_state_and_chat();
   update_announcements test_a;
