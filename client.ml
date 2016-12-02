@@ -169,6 +169,7 @@ let _ =
                                        ^ client_s.room_id);
                                ];
     show_state_and_chat ();
+    add_announcements client_s [("Me",help_string)];
     update_announcements client_s.announcements;
     let user = client_s.player_id in
     let room = client_s.room_id in
