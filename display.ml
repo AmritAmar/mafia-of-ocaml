@@ -337,13 +337,15 @@ let update_game_state day game_stage alive dead =
     (print_object 8 5 [yellow] screen_height ["You are now";"in the"];
     print_object 8 7 [magenta;Bold] 12 [game_stage])
   else if String.uppercase_ascii game_stage = "GAME OVER" then
-    print_object 8 5 [magenta;Bold] 12 [game_stage]
+    (print_object 8 5 [magenta;Bold] 12 [game_stage];
+    print_list 23 5 [green] 12 20 alive 0;
+    print_list 40 5 [red] 12 20 dead 0)
   else
     (print_object 8 5 [yellow] screen_height ["It is"];
     print_object 8 7 [yellow] screen_height ["time"];
-    print_object 8 6 [magenta;Bold] 12 [game_stage]);
-  print_list 23 5 [green] 12 20 alive 0;
-  print_list 40 5 [red] 12 20 dead 0;
+    print_object 8 6 [magenta;Bold] 12 [game_stage];
+    print_list 23 5 [green] 12 20 alive 0;
+    print_list 40 5 [red] 12 20 dead 0);
   restore_cursor();
   ()
 
@@ -378,14 +380,12 @@ let new_prompt () =
   erase Eol;
   print_string [] "> "
 
-(*
-let () =
+
+(* let () =
   show_banner ();
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
   update_game_state (-1) "Lobby" alive dead;
-  update_game_state (-1) "Game Over" alive dead;
   new_prompt ();
-
  *)
