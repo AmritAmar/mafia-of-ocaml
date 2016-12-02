@@ -112,14 +112,17 @@ let rec get_input_async f =
                               "vote"; "mafia-chat"; "help" ])
         then f (first_word,rest)
         else ((match client_s.announcements with
-              | (_,h)::_ when h = "Invalid command" -> ()
-              | _ -> add_announcements client_s ["Me","Invalid command"]);
+              | (_,h)::_ when h = help_string -> ()
+              | _ -> (add_announcements client_s ["Me",help_string];
+                      update_announcements client_s.announcements));
              get_input_async f)
 
 let rec server_verify f =
   f () >>= fun (code,body) ->
   if code = 200 then return (code,body)
-  else (print_endline body; server_verify f)
+  else (add_announcements client_s [("Me",body)];
+        update_announcements client_s.announcements;
+        server_verify f)
 
 (* Main REPL *)
 let _ =
@@ -149,9 +152,7 @@ let _ =
       then (send_post (make_uri server_url "create_room" room) ()
            >>= fun (code,body) -> 
            if code <> 200
-           then (add_announcements client_s [("Me",body)];
-                update_announcements client_s.announcements;
-                return (code,body))
+           then return (code,body)
            else (send_post
                 (make_uri server_url "join_room" room)
                 ~data:{player_id=user; player_action="join"; arguments=[]}
@@ -206,9 +207,10 @@ let _ =
         else upon (send_post (make_uri server_url "player_action" room)
                   ~data:{player_id=user; player_action=cmd; arguments=[args]}
                   ())
-        (fun (_,body) -> add_announcements client_s [("Me",body)];
-                            update_announcements client_s.announcements;
-                            user_input_loop ())
+        (fun (code,body) -> (if code <> 200 then
+                            (add_announcements client_s [("Me",body)];
+                            update_announcements client_s.announcements);
+                            user_input_loop ()))
       )
     in
     server_update_loop ();
