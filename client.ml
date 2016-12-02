@@ -112,8 +112,9 @@ let rec get_input_async f =
                               "vote"; "mafia-chat"; "help" ])
         then f (first_word,rest)
         else ((match client_s.announcements with
-              | (_,h)::_ when h = "Invalid command" -> ()
-              | _ -> add_announcements client_s ["Me","Invalid command"]);
+              | (_,h)::_ when h = help_string -> ()
+              | _ -> (add_announcements client_s ["Me",help_string];
+                      update_announcements client_s.announcements));
              get_input_async f)
 
 let rec server_verify f =
