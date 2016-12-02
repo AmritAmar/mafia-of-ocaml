@@ -61,8 +61,8 @@ let rec is_in n = function
   | h::t -> if h = n then true else is_in n t
 
 let rec get_input ?(commands=[]) () =
-  new_prompt ();
   let input = Pervasives.read_line () in
+  new_prompt ();
   let rec found_in s = function
     | [] -> false
     | h::t -> if s = h then true else found_in s t
@@ -87,7 +87,6 @@ let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
 let buf = Core.Std.String.create 4096
 let rec get_input_async f =
-  new_prompt ();
   choose
     [
       choice (Reader.read reader buf) (fun r -> `Reader r);
@@ -105,7 +104,8 @@ let rec get_input_async f =
       let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
               |> String.trim
       in
-      if s = "" then (new_prompt(); get_input_async f)
+      new_prompt ();
+      if s = "" then get_input_async f
       else
         let first_word,rest = match Str.(bounded_split (regexp " ") s 2) with
                               | h::[]    -> (String.lowercase_ascii h,"")
@@ -138,6 +138,7 @@ let _ =
   in
   init ();
   show_banner ();
+  new_prompt ();
   upon (
     server_verify (fun () ->
       add_announcements client_s [("Me","Type \"join [room_id]\" to join an "
@@ -176,6 +177,7 @@ let _ =
     show_state_and_chat ();
     add_announcements client_s [("Me",help_string)];
     update_announcements client_s.announcements;
+    new_prompt ();
     let user = client_s.player_id in
     let room = client_s.room_id in
     (* update request loop *)

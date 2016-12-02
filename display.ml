@@ -378,7 +378,8 @@ let show_state_and_chat () =
 let new_prompt () =
   set_cursor 2 (screen_height-1);
   erase Eol;
-  print_string [] "> "
+  print_string [] "> ";
+  flush_all ();
 
 
 (* let () =
