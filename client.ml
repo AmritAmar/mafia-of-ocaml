@@ -35,11 +35,15 @@ let send_post uri ?data () =
   let encoded_data = match data with | None   -> `String ""
                                      | Some d -> `String (encode_cjson d)
   in
-  Client.post uri ~body:encoded_data >>= fun (resp,body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  let new_ivar = Ivar.create () in
-  upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
-  Ivar.read new_ivar
+  Async_kernel.Monitor.try_with (fun () -> Client.post uri ~body:encoded_data)
+  >>= function
+  | Core_kernel.Std.Result.Ok (resp,body) ->
+      let code = resp |> Response.status |> Code.code_of_status in
+      let new_ivar = Ivar.create () in
+      upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
+      Ivar.read new_ivar
+  | Core_kernel.Std.Result.Error _ ->
+      Pervasives.(print_endline "Server connection error"; exit 0)
 
 (* Start state *)
 let client_s = { player_id="";
