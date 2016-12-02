@@ -466,7 +466,6 @@ let player_action _ req body =
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
-            | _ -> respond `Bad_request "Malformed client_action.json"
     in
 
     Body.to_string body >>= action
