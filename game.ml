@@ -212,12 +212,12 @@ let time_span state =
 let step_game st updates = 
     
     (* maybe not most fluent game play if end check is here *)
-    if (List.fold_left (fun a (_,x)-> (x = Mafia) || a) false st.players) then
+    if (List.fold_left (fun a (_,x)-> (x = Innocent) && a) true st.players) then
         {st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
                  ::st.announcement_history}
-    else if (List.fold_left (fun a (_,x)-> (x = Innocent) || a) false st.players) then 
+    else if (List.fold_left (fun a (_,x)-> (x = Mafia) && a) true st.players) then 
         {st with stage = Game_Over; 
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafias have won."))
