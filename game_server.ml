@@ -327,14 +327,28 @@ let can_chat ab =
     let cd = ab.cd in 
 
     let pn = cd.player_id in 
-    let can_chat = match rd.state with 
+    let chatty = match rd.state with 
                     | Lobby _ -> true 
                     | Game gs -> Game.can_chat gs pn 
     in 
 
-    if can_chat then ab 
+    if chatty then ab 
     else 
-        raise (Action_Error (respond`Bad_request "Cannot Currently Chat"))
+        raise (Action_Error (respond`Bad_request "Cannot Chat in Current Game Mode."))
+
+let in_mafia ab = 
+    let rd = ab.rd in 
+    let cd = ab.cd in 
+    
+    let mafioso = match rd.state with 
+                    | Lobby _ -> false 
+                    | Game gs -> 
+                        is_mafia cd.player_id gs
+    in 
+    
+    if mafioso then ab 
+    else 
+        raise (Action_Error (respond `Bad_request "You are not a member of the mafia!"))
 
 (* [write_chat ab] adds the client's chat message into the chat buffer and 
  * returns an 'OK response *)
@@ -445,7 +459,7 @@ let player_action _ req body =
                 (List.fold ~init:"" ~f:(fun acc x -> x ^ ";" ^ acc) cd.arguments);
             match cd.player_action with 
                 | "chat" -> ab |> can_chat |> write_chat General
-                | "mafia_chat" -> ab |> can_chat |> write_chat Mafia
+                | "mafia-chat" -> ab |> can_chat |> in_mafia |> write_chat Mafia
                 | "ready" -> ab |> write_ready  
                 | "start" -> ab |> is_admin |> all_ready |> write_game 
                 | "vote" -> ab |> can_vote |> write_vote 
