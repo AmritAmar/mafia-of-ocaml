@@ -19,6 +19,9 @@ test:
 client:
 	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte ${URL}
 
+client-default:
+	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte http://mafia.ishikawa.tech:3110
+
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte
 
