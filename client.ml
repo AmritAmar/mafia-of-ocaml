@@ -101,9 +101,9 @@ let rec get_input_async f =
       >>> fun _ ->
       shutdown 0
     | `Ok len ->
-      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
-              |> String.trim
-      in
+      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
+      redraw_long_string s;
+      let s = String.trim s in
       new_prompt ();
       if s = "" then get_input_async f
       else
@@ -112,8 +112,7 @@ let rec get_input_async f =
                               | h::t::[] -> (String.lowercase_ascii h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (is_in first_word ["chat"; "ready"; "start";
-                              "vote"; "mafia-chat"; "help" ])
+        if is_in first_word ["chat";"ready";"start";"vote";"mafia-chat";"help"]
         then f (first_word,rest)
         else ((match client_s.announcements with
               | (_,h)::_ when h = help_string -> ()
@@ -149,7 +148,7 @@ let _ =
       let cmd,room = get_input ~commands:["join";"create"] () in
       client_s.room_id <- room;
       add_announcements client_s [("Me","Please enter a username that is <= "
-                                         ^ "15 characters long.")];
+                                         ^ "10 characters long.")];
       update_announcements client_s.announcements;
       let _,user = get_input () in
       client_s.player_id <- user;
