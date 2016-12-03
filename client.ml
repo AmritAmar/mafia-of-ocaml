@@ -102,7 +102,7 @@ let rec get_input_async f =
       shutdown 0
     | `Ok len ->
       let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
-      redraw_long_string s;
+      redraw_long_string s client_s;
       let s = String.trim s in
       new_prompt ();
       if s = "" then get_input_async f

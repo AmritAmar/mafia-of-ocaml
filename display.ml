@@ -1,4 +1,5 @@
 open ANSITerminal
+open Client_state
 
 let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
@@ -421,12 +422,25 @@ let show_state_and_chat () =
   ()
 
 
+let prompt = "> "
+
 let new_prompt () =
   set_cursor 2 (screen_height-1);
   erase Eol;
-  print_string [] "> ";
-  flush_all ();
+  print_string [] prompt;
+  flush_all ()
 
+let redraw_long_string s state =
+  let lines = String.(length s + length prompt - 1) / screen_width in
+  if lines > 0
+  then (erase Screen;
+       init ();
+       show_state_and_chat ();
+       update_game_state state.day_count state.game_stage state.alive_players state.dead_players;
+       update_announcements state.announcements;
+       set_cursor 1 screen_height;
+       erase Eol)
+  
 (*
 let () =
   show_banner ();
