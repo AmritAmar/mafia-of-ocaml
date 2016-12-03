@@ -37,9 +37,9 @@ val init_state : string list -> game_state
  *)
 val latest_votes : client_json list -> client_json list -> client_json list
 
-(** [can_chat] determines whether a player can chat in this game state
+(** [can_chat] determines whether chatting is allowed in this game_state
  *)
-val can_chat : game_state -> player_name -> bool
+val can_chat : game_state -> bool
 
 (** [can_vote] determines whether a player can vote in this game state
  *)
@@ -48,6 +48,10 @@ val can_vote : game_state -> player_name -> bool
 (* [can_recieve] determines if a player satisfies the target group in this 
  * game state. *)
 val can_recieve : game_state -> player_name -> target -> bool 
+
+(** returns whether or not player is alive
+ *)
+val is_alive: player_name -> game_state -> bool 
 
 (** returns whether or not player is a mafia
  *)
@@ -80,7 +84,6 @@ val voting_to_night : game_state -> client_json list -> game_state
 (** [step_game] steps game to the next stage, returning a new state for the 
   * next stage *)
 val step_game : game_state -> client_json list -> game_state
-
 
 (** [string_of_stage] is the string that represents the given game stage. *)
 val string_of_stage : game_stage -> string 

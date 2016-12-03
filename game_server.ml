@@ -251,7 +251,7 @@ let valid_id ab =
                   ~f:(fun acc (n,_) -> (n = player_id) || acc) 
                   players in 
     
-    let too_long = String.length player_id >= 15 in 
+    let too_long = String.length player_id > 10 in 
     
     if (reserved)
         then raise (Action_Error (respond `Bad_request "Chosen name is a reserved keyword."))
@@ -319,17 +319,29 @@ let in_room ab =
     else 
         raise (Action_Error (respond `Bad_request (pn ^ " is not in room " ^ id)))
 
+let in_living ab = 
+    let rd = ab.rd in 
+    let cd = ab.cd in
+    let pn = cd.player_id in  
+
+    let in_living = match rd.state with 
+                        | Lobby _ -> true 
+                        | Game gs -> Game.is_alive pn gs 
+
+    in 
+
+    if in_living then ab 
+    else raise (Action_Error (respond `Bad_request "You cannot do that while dead!"))
+
 (* [can_chat ab] is [ab] if the player specified in the action bundle's client_data 
  * is able to chat in the supplied room. Returns Action Error otherwise *)
 
 let can_chat ab = 
     let rd = ab.rd in 
-    let cd = ab.cd in 
-
-    let pn = cd.player_id in 
+    
     let chatty = match rd.state with 
                     | Lobby _ -> true 
-                    | Game gs -> Game.can_chat gs pn 
+                    | Game gs -> Game.can_chat gs
     in 
 
     if chatty then ab 
@@ -457,11 +469,11 @@ let player_action _ req body =
                 (ab.id )(cd.player_id) (cd.player_action )
                 (List.fold ~init:"" ~f:(fun acc x -> x ^ ";" ^ acc) cd.arguments);
             match cd.player_action with 
-                | "chat" -> ab |> can_chat |> write_chat General
-                | "mafia-chat" -> ab |> can_chat |> in_mafia |> write_chat Mafia
+                | "chat" -> ab |> in_living |> can_chat |> write_chat General
+                | "mafia-chat" -> ab |> in_living |> in_mafia |> write_chat Mafia
                 | "ready" -> ab |> write_ready  
                 | "start" -> ab |> is_admin |> all_ready |> write_game 
-                | "vote" -> ab |> can_vote |> write_vote 
+                | "vote" -> ab |> in_living |> can_vote |> write_vote 
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
