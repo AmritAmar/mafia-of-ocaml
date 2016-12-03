@@ -23,28 +23,34 @@ type game_state = {
 
 (*
  * Assign roles to players
- * 1/4 of the players become a member of the Mafia
+ * 1/3 of the players become a member of the Mafia
  *)
 let rec assign_roles counter assigned players num_players = 
     match players with 
     [] -> assigned
-    | h::t -> if (counter >= num_players/4) then 
+    | h::t -> if (counter >= num_players/3) then 
         assign_roles (counter+1) ((h,Innocent)::assigned) t num_players 
     else assign_roles (counter+1) ((h,Mafia)::assigned) t num_players
+
+let rec get_mafia players mafia = match players with
+    [] -> mafia
+    | (x,y)::t -> if (y=Mafia) then get_mafia t (x^", "^mafia) else get_mafia t mafia
 
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
  *)
 let init_state lst = 
+    let pl =  assign_roles 0 [] lst (List.length lst) in
     {day_count = 0; stage = Discussion;
-        players = assign_roles 0 [] lst (List.length lst); 
+        players = pl; 
         announcement_history = [(Time.now (), 
             (Innocents, "You are an Innocent citizen of the town,"^
                 "and must find out and execute all the Mafia to survive!"));
         (Time.now (), 
             (Mafias, "You are a member of the Mafia."^
                 "Try to kill all of the innocent citizens without getting"^
-                " found and executed!"))]}
+                " found and executed! These are your fellow mafia members: "^
+                (get_mafia pl "")))]}
 
 let kill_player p pl =
     List.map (fun (x,y) -> if x=p then (x,Dead) else (x,y)) pl
@@ -136,7 +142,7 @@ let night_to_disc st updates =
     let victim = match victim_list with [] -> ""
     | hd::tl -> most_voted hd 1 hd 1 tl in
     let updated_players = kill_player victim st.players in
-    
+     
     {day_count = st.day_count+1; stage = Discussion; 
         players = updated_players; 
         announcement_history = (Time.now (), (All, 
