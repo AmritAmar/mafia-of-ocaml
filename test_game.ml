@@ -14,14 +14,14 @@ let init_state = {day_count = 0; stage = Voting;
 let state2 = {day_count = 1; stage = Discussion; 
         players = kill_tyler;  
         announcement_history = [(Time.now (),
-             "Good Morning! Last night, Tyler was killed in their sleep by the Mafia :( RIP.")]}
+             (All,"Good Morning! Last night, Tyler was killed in their sleep by the Mafia :( RIP."))]}
 let vote_kill_irene = handle_exec_vote init_state ["Irene";"Irene";"Rachel";"Michael"]
 let vote_kill_irene2 = handle_exec_vote init_state ["Irene";"Rachel";"Michael";"Irene"]
 let vote_kill_irene3 = handle_exec_vote init_state ["Irene";"Michael";"Michael";"Irene"]
 let client_json1 = [{player_id = "Irene";player_action = "vote";arguments = ["Michael"]};
 					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]};
 					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Rachel";player_action = "vote";arguments = ["Michael"]};
+					{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]};
 					{player_id = "Irene";player_action = "vote";arguments = ["Tyler"]};
 					{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]}]
 let latest_client_json1 = 
@@ -37,13 +37,12 @@ let game_tests = [
     (assign_roles 0 [] id_lst (List.length id_lst)));
   "kill_player" >:: (fun _ -> assert_equal kill_irene
     (kill_player "Irene" plr_lst));
-  "handle_exec_vote_inno" >:: (fun _ -> assert_equal kill_irene
+  "handle_exec_vote_inno1" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene.players));
-  "handle_exec_vote_inno" >:: (fun _ -> assert_equal 
-  	("Sadly, Irene was voted guilty and has been executed.\n"
-  	^"Irene was an Innocent citizen.")
-  	(vote_kill_irene.announcement_history |> List.hd |> snd));
-  "handle_exec_vote_inno" >:: (fun _ -> assert_equal kill_irene
+  "handle_exec_vote_inno2" >:: (fun _ -> assert_equal 
+  	("You were voted as guilty and was executed. :(")
+  	(vote_kill_irene.announcement_history |> List.hd |> snd |> snd));
+  "handle_exec_vote_inno3" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene2.players));
   "handle_exec_vote_amb" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene3.players)); (* ambiguous!!! *)
@@ -51,9 +50,9 @@ let game_tests = [
     ((latest_votes [] client_json1)));
   "night_to_disc" >:: (fun _ -> assert_equal (state2.day_count)
     ((night_to_disc init_state client_json1).day_count));
-  "night_to_disc1" >:: (fun _ -> assert_equal (state2.announcement_history |> List.hd |> snd)
+  "night_to_disc1" >:: (fun _ -> assert_equal (state2.announcement_history |> List.hd |> snd |> snd)
   	~printer:(fun x -> x)
-    ((night_to_disc init_state client_json1).announcement_history |> List.hd |> snd));
+    ((night_to_disc init_state client_json1).announcement_history |> List.hd |> snd |> snd));
 
 ]
 

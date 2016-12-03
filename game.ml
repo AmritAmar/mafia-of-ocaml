@@ -85,7 +85,9 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
                 voted ^ " was a Mafia! Nice work!")
     in 
     {st with players = kill_player voted st.players; 
-             announcement_history = (now, (Player voted, "You have now died."))::(now,a):: st.announcement_history}
+             announcement_history = (now, (Player voted, 
+                "You were voted as guilty and was executed. :("))::(now,a):: 
+                st.announcement_history}
 (*
  * Checks if the game has ended:
  * Game ends if either - everyone is innocent or everyone is mafia
@@ -121,8 +123,8 @@ let rec most_voted max_vote max_count vote count votes =
     match votes with 
     [] -> if max_count < count then vote else max_vote
     | hd::tl -> if vote = hd then most_voted max_vote max_count hd (count+1) tl
-        else if count > max_count then most_voted vote count hd 1 tl
-        else most_voted max_vote max_count hd 1 tl
+        else (if count > max_count then most_voted vote count hd 1 tl
+        else most_voted max_vote max_count hd 1 tl)
 
 let night_to_disc st updates = 
     (* Only adds to list_killed if player is mafia*)
@@ -210,11 +212,6 @@ let time_span state =
     | Discussion -> Core.Time.Span.minute
     | Night -> Core.Time.Span.minute
 
-(*
- * TODO: 1. how to collect/handle requests from clients in a timely manner? 
- * 2. chat handling
- * 3. resolve assumptions
- *)
 let step_game st updates = 
     
     (* maybe not most fluent game play if end check is here *)
