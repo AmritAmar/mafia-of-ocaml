@@ -13,7 +13,7 @@ let help_string =
 
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
-  
+
 let make_uri base_url path room =
   let new_uri = Uri.of_string
                 (if Str.string_match (Str.regexp "^http://") base_url 0
@@ -135,7 +135,6 @@ let _ =
                         exit 0)
                    else Sys.argv.(1)
   in
-  init ();
   show_banner ();
   new_prompt ();
   upon (
@@ -154,7 +153,7 @@ let _ =
       client_s.player_id <- user;
       if cmd = "create"
       then (send_post (make_uri server_url "create_room" room) ()
-           >>= fun (code,body) -> 
+           >>= fun (code,body) ->
            if code <> 200
            then return (code,body)
            else (send_post
@@ -189,7 +188,7 @@ let _ =
                           arguments=[client_s.timestamp] }
                   ()
       in
-      upon get_update (fun (code,body) -> 
+      upon get_update (fun (code,body) ->
         (if code = 200 then
           let sj = decode_sjson body in
           let (new_state,new_msgs,new_a) = update_client_state client_s sj in
