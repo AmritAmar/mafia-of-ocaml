@@ -25,11 +25,11 @@ type game_state = {
  * Assign roles to players
  * 1/4 of the players become a member of the Mafia
  *)
-let rec assign_roles counter assigned players num_players= 
+let rec assign_roles counter assigned players num_players = 
     match players with 
     [] -> assigned
     | h::t -> if (counter >= num_players/4) then 
-        assign_roles (counter+1) ((h,Innocent)::assigned) t num_players
+        assign_roles (counter+1) ((h,Innocent)::assigned) t num_players 
     else assign_roles (counter+1) ((h,Mafia)::assigned) t num_players
 
 (*
@@ -38,7 +38,13 @@ let rec assign_roles counter assigned players num_players=
 let init_state lst = 
     {day_count = 0; stage = Discussion;
         players = assign_roles 0 [] lst (List.length lst); 
-        announcement_history = []}
+        announcement_history = [(Time.now (), 
+            (Innocents, "You are an Innocent citizen of the town,"^
+                "and must find out and execute all the Mafia to survive!"));
+        (Time.now (), 
+            (Mafias, "You are a member of the Mafia."^
+                "Try to kill all of the innocent citizens without getting"^
+                " found and executed!"))]}
 
 let kill_player p pl =
     List.map (fun (x,y) -> if x=p then (x,Dead) else (x,y)) pl
@@ -79,7 +85,7 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
                 voted ^ " was a Mafia! Nice work!")
     in 
     {st with players = kill_player voted st.players; 
-             announcement_history = (now,a):: st.announcement_history}
+             announcement_history = (now, (Player voted, "You have now died."))::(now,a):: st.announcement_history}
 (*
  * Checks if the game has ended:
  * Game ends if either - everyone is innocent or everyone is mafia
