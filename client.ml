@@ -35,11 +35,15 @@ let send_post uri ?data () =
   let encoded_data = match data with | None   -> `String ""
                                      | Some d -> `String (encode_cjson d)
   in
-  Client.post uri ~body:encoded_data >>= fun (resp,body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  let new_ivar = Ivar.create () in
-  upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
-  Ivar.read new_ivar
+  Async_kernel.Monitor.try_with (fun () -> Client.post uri ~body:encoded_data)
+  >>= function
+  | Core_kernel.Std.Result.Ok (resp,body) ->
+      let code = resp |> Response.status |> Code.code_of_status in
+      let new_ivar = Ivar.create () in
+      upon (Body.to_string body) (fun s -> Ivar.fill new_ivar (code,s));
+      Ivar.read new_ivar
+  | Core_kernel.Std.Result.Error _ ->
+      Pervasives.(print_endline "Server connection error"; exit 0)
 
 (* Start state *)
 let client_s = { player_id="";
@@ -57,8 +61,8 @@ let rec is_in n = function
   | h::t -> if h = n then true else is_in n t
 
 let rec get_input ?(commands=[]) () =
-  new_prompt ();
   let input = Pervasives.read_line () in
+  new_prompt ();
   let rec found_in s = function
     | [] -> false
     | h::t -> if s = h then true else found_in s t
@@ -83,7 +87,6 @@ let reader = Reader.create (Fd.stdin())
 let writer = Writer.create ~raise_when_consumer_leaves:false (Fd.stdout())
 let buf = Core.Std.String.create 4096
 let rec get_input_async f =
-  new_prompt ();
   choose
     [
       choice (Reader.read reader buf) (fun r -> `Reader r);
@@ -98,28 +101,31 @@ let rec get_input_async f =
       >>> fun _ ->
       shutdown 0
     | `Ok len ->
-      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
-              |> String.trim
-      in
-      if s = "" then (new_prompt(); get_input_async f)
+      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
+      redraw_long_string s client_s;
+      let s = String.trim s in
+      new_prompt ();
+      if s = "" then get_input_async f
       else
         let first_word,rest = match Str.(bounded_split (regexp " ") s 2) with
                               | h::[]    -> (String.lowercase_ascii h,"")
                               | h::t::[] -> (String.lowercase_ascii h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (is_in first_word ["chat"; "ready"; "start";
-                              "vote"; "mafia-chat"; "help" ])
+        if is_in first_word ["chat";"ready";"start";"vote";"mafia-chat";"help"]
         then f (first_word,rest)
         else ((match client_s.announcements with
-              | (_,h)::_ when h = "Invalid command" -> ()
-              | _ -> add_announcements client_s ["Me","Invalid command"]);
+              | (_,h)::_ when h = help_string -> ()
+              | _ -> (add_announcements client_s ["Me",help_string];
+                      update_announcements client_s.announcements));
              get_input_async f)
 
 let rec server_verify f =
   f () >>= fun (code,body) ->
   if code = 200 then return (code,body)
-  else (print_endline body; server_verify f)
+  else (add_announcements client_s [("Me",body)];
+        update_announcements client_s.announcements;
+        server_verify f)
 
 (* Main REPL *)
 let _ =
@@ -131,6 +137,7 @@ let _ =
   in
   init ();
   show_banner ();
+  new_prompt ();
   upon (
     server_verify (fun () ->
       add_announcements client_s [("Me","Type \"join [room_id]\" to join an "
@@ -141,7 +148,7 @@ let _ =
       let cmd,room = get_input ~commands:["join";"create"] () in
       client_s.room_id <- room;
       add_announcements client_s [("Me","Please enter a username that is <= "
-                                         ^ "15 characters long.")];
+                                         ^ "10 characters long.")];
       update_announcements client_s.announcements;
       let _,user = get_input () in
       client_s.player_id <- user;
@@ -149,9 +156,7 @@ let _ =
       then (send_post (make_uri server_url "create_room" room) ()
            >>= fun (code,body) -> 
            if code <> 200
-           then (add_announcements client_s [("Me",body)];
-                update_announcements client_s.announcements;
-                return (code,body))
+           then return (code,body)
            else (send_post
                 (make_uri server_url "join_room" room)
                 ~data:{player_id=user; player_action="join"; arguments=[]}
@@ -169,7 +174,9 @@ let _ =
                                        ^ client_s.room_id);
                                ];
     show_state_and_chat ();
+    add_announcements client_s [("Me",help_string)];
     update_announcements client_s.announcements;
+    new_prompt ();
     let user = client_s.player_id in
     let room = client_s.room_id in
     (* update request loop *)
@@ -205,9 +212,10 @@ let _ =
         else upon (send_post (make_uri server_url "player_action" room)
                   ~data:{player_id=user; player_action=cmd; arguments=[args]}
                   ())
-        (fun (_,body) -> add_announcements client_s [("Me",body)];
-                            update_announcements client_s.announcements;
-                            user_input_loop ())
+        (fun (code,body) -> (if code <> 200 then
+                            (add_announcements client_s [("Me",body)];
+                            update_announcements client_s.announcements);
+                            user_input_loop ()))
       )
     in
     server_update_loop ();

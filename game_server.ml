@@ -427,13 +427,12 @@ let write_game ab =
  * game_state. Returns Action_Error otherwise *)
 
 let can_vote ab = 
-    let id = ab.id in 
     let rd = ab.rd in 
 
     match rd.state with 
         | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby.")) 
         | Game gs ->
-            if Game.can_vote gs id then ab 
+            if Game.can_vote gs ab.cd.player_id then ab 
             else 
                 raise (Action_Error (respond `Bad_request ("Cannot vote during " ^ (string_of_stage gs.stage))))
 
@@ -466,7 +465,7 @@ let player_action _ req body =
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
-            | _ -> respond `Bad_request "Malformed client_action.json"
+            | _ -> respond `Bad_request "Malformed Client Json"
     in
 
     Body.to_string body >>= action

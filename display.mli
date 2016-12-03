@@ -1,3 +1,5 @@
+open Client_state
+
 (**
  * Updates the chat log with the given list of strings. The list will be
  * ordered by how recent the message is (most recent to least recent). Returns
@@ -42,3 +44,9 @@ val init : unit -> unit
  * Show state and chat area.
  *)
 val show_state_and_chat : unit -> unit
+
+(**
+ * If the user input is longer than one line, erase the screen and redraw
+ * everything
+ *)
+val redraw_long_string : string -> client_state-> unit
