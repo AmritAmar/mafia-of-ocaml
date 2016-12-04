@@ -169,7 +169,7 @@ let voting_to_night st updates =
             [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
             |> List.concat |> handle_exec_vote st 
          in
-    {st with stage = Night; 
+    {s with stage = Night; 
              announcement_history = (Time.now (), (All,
              "Its night time now - go sleep unless you have someone to visit :)"))
              ::st.announcement_history}
@@ -180,12 +180,10 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
-let can_chat state player =
+let can_chat state =
     match state.stage with
-    | Game_Over -> true 
-    | Discussion -> is_alive player state
-    | Night -> is_mafia player state
-    | _ -> false
+     | Night -> false 
+     | Discussion | Voting | Game_Over -> true
 
 let can_vote state player = 
     match state.stage with
