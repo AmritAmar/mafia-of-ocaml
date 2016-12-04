@@ -169,7 +169,7 @@ let voting_to_night st updates =
             [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
             |> List.concat |> handle_exec_vote st 
          in
-    {st with stage = Night; 
+    {s with stage = Night; 
              announcement_history = (Time.now (), (All,
              "Its night time now - go sleep unless you have someone to visit :)"))
              ::st.announcement_history}

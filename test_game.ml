@@ -37,6 +37,7 @@ let game_tests = [
     (assign_roles 0 [] id_lst (List.length id_lst)));
   "kill_player" >:: (fun _ -> assert_equal kill_irene
     (kill_player "Irene" plr_lst));
+
   "handle_exec_vote_inno1" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene.players));
   "handle_exec_vote_inno2" >:: (fun _ -> assert_equal 
@@ -44,6 +45,7 @@ let game_tests = [
   	(vote_kill_irene.announcement_history |> List.hd |> snd |> snd));
   "handle_exec_vote_inno3" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene2.players));
+
   "handle_exec_vote_amb" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene3.players)); (* ambiguous!!! *)
   "latest_votes" >:: (fun _ -> assert_equal latest_client_json1
