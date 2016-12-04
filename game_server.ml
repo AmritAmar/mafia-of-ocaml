@@ -154,6 +154,7 @@ let game_transition rd gs now =
     (* TODO: verify if these are sorted are not *)
     let updates = List.rev 
                     (List.fold ~init:[] ~f:collect_updates rd.action_buffer) in 
+
     let gs' = Game.step_game gs updates in 
     let t' = Time.add now (Game.time_span gs') in 
     eprintf "Game has transitioned to '%s'. Next Transition at: %s"
@@ -170,26 +171,24 @@ let transition_beat id now =
     let rd = Hashtbl.find_exn rooms id in 
     match rd.transition_at with 
         | None ->
-            eprintf "\t No Transition Currently Scheduled\n";
-            ()
+            eprintf "\t No Transition Currently Scheduled\n"
         | Some t when t > now -> 
-            eprintf "\tTime To Next Transition: %s\n" (Time.diff t now |> Time.Span.to_short_string);
-            ()
+            eprintf "\tTime To Next Transition: %s\n" (Time.diff t now |> Time.Span.to_short_string)
         | Some _ -> 
             try 
                 let (st',time) = transition rd now in 
-                Hashtbl.set rooms ~key:id ~data:{rd with state = st'; 
-                                                 transition_at = time};
-                ()
+                Hashtbl.set rooms ~key:id ~data:{rd with state = st';
+                                                         chat_buffer = [];
+                                                         action_buffer = [];
+                                                         transition_at = time}
             with 
-                _ -> close_room id; ()
+                _ -> close_room id
     
 let server_beat _ = 
     let now = Time.now () in 
     eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now); (*check heart_beat*)
-    List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now);
-    ()
+    List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now)
 
 let daemon_action _ _ _ = 
     server_beat ();
@@ -222,7 +221,7 @@ let create_room _ req _ =
             } in 
             Hashtbl.set rooms ~key:s ~data:room; 
             eprintf "Room Created! (%s)\n" s; 
-            Server.respond_with_string  ~code:`OK "Room created."
+            respond `OK "Room created."
 
 (* ----------------------------------------------------- *)
 (* - Room Join: *)
@@ -389,7 +388,7 @@ let write_ready {id; rd; cd} =
         | Lobby ls ->
             let pl' = List.fold ~init:[] ~f:update_players ls.players in 
             Hashtbl.set rooms ~key:id ~data:{rd with state = Lobby {ls with players = pl'}}; 
-            respond `OK "Done."
+            respond `OK "Succesfully Readied Up!"
 
 (* [is_admin ab] is [ab] if the palyer specified within the action_bundle is an 
  * admin in the action_bundle's supplied room, and the room is in lobby mode. 
@@ -431,11 +430,17 @@ let write_game ab =
 
     match rd.state with 
         | Game _ -> raise (Action_Error (respond`Bad_request "Game already in progress"))
-        | Lobby ls ->
-           let (st', t') = lobby_transition ls (Time.now ()) in 
-           Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'};
+        | Lobby _ ->
+           transition_beat id (Time.now ()); 
            eprintf "(%s) entering Game Mode\n" id; 
            respond `OK "Done."
+
+let one_argument ab = 
+    let cd = ab.cd in 
+    match List.length cd.arguments with 
+        | 0 -> raise (Action_Error (respond `Bad_request "No arguments specified!"))
+        | 1 -> ab
+        | _ -> raise (Action_Error (respond `Bad_request "Too many arguments specified!"))
 
 (* [can_vote ab] is [ab] if the player specified within [ab] can vote in the current 
  * game_state. Returns Action_Error otherwise *)
@@ -459,9 +464,11 @@ let write_vote ab =
         | Lobby _ -> raise (Action_Error (respond `Bad_request "Cannot vote in Lobby"))
         | Game _ ->
             let actbuf' = (Time.now (), cd) :: rd.action_buffer in 
+            (* we know there's only one arg in cd *)
+            let target = List.hd_exn cd.arguments in 
             Hashtbl.set rooms ~key:id ~data:{rd with action_buffer = actbuf'};  
-            respond `OK "Done."
-
+            respond `OK ("You have voted for: " ^ target)
+    
 let player_action _ req body = 
     let action body = 
         try 
@@ -475,7 +482,7 @@ let player_action _ req body =
                 | "mafia-chat" -> ab |> in_living |> in_mafia |> write_chat Mafia
                 | "ready" -> ab |> write_ready  
                 | "start" -> ab |> is_admin |> all_ready |> write_game 
-                | "vote" -> ab |> in_living |> can_vote |> write_vote 
+                | "vote" -> ab |> one_argument |> in_living |> can_vote |> write_vote 
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
@@ -505,7 +512,7 @@ let extract_players rd =
     in 
     
     match rd.state with 
-        | Lobby ls -> List.fold ~init: [] ~f: l_players rd.last_updated
+        | Lobby _ -> List.fold ~init: [] ~f: l_players rd.last_updated
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
 let extract_announce cd rd last =     
@@ -578,7 +585,7 @@ let extract_status ab =
     let cd = ab.cd in 
 
     let last = match cd.arguments with 
-                | [] -> raise (Action_Error (respond `Bad_request "Must specify initial timestamp"))
+                | [] -> raise (Action_Error (respond `Bad_request "Must specify initial timestamp."))
                 | h::_ -> Time.of_string_fix_proto `Utc h 
     in 
     {
