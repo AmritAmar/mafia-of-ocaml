@@ -439,7 +439,10 @@ let redraw_long_string s state =
   then (erase Screen;
        init ();
        show_state_and_chat ();
-       update_game_state state.day_count state.game_stage state.alive_players state.dead_players;
+       update_game_state state.day_count
+                         state.game_stage
+                         (Str_set.elements state.alive_players)
+                         state.dead_players;
        update_announcements state.announcements;
        set_cursor 1 screen_height;
        erase Eol)
