@@ -34,7 +34,9 @@ let rec assign_roles counter assigned players num_players =
 
 let rec get_mafia players mafia = match players with
     [] -> mafia
-    | (x,y)::t -> if (y=Mafia) then get_mafia t (x^", "^mafia) else get_mafia t mafia
+    | (x,y)::t -> if (y=Mafia)
+                    then get_mafia t (x^", "^mafia) 
+                    else get_mafia t mafia
 
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
@@ -75,7 +77,8 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
     let voted = voting "" 0 p in
     
     if voted = "" then 
-        let a = (All, "No majority vote has occured. No one is being executed.") in 
+        let a = (All, "No majority vote has occured. "^
+                      "No one is being executed.") in 
         {st with announcement_history = (now,a) :: st.announcement_history}
     else 
     
@@ -157,7 +160,8 @@ let disc_to_voting st updates =
     {st with stage = Voting; 
              announcement_history = (Time.now (), (All,
                 "Discussion time is now over. \n"^
-                "Please vote on a player that could be a member of the Mafia."))
+                "Please vote on a player that could"^
+                "be a member of the Mafia."))
              ::st.announcement_history}
 
 (*
@@ -171,7 +175,8 @@ let voting_to_night st updates =
          in
     {s with stage = Night; 
              announcement_history = (Time.now (), (All,
-             "Its night time now - go sleep unless you have someone to visit :)"))
+             "Its night time now - go sleep unless you "^
+             "have someone to visit :)"))
              ::st.announcement_history}
 
 let string_of_stage = function 
