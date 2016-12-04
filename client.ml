@@ -212,7 +212,7 @@ let _ =
         else upon (send_post (make_uri server_url "player_action" room)
                   ~data:{player_id=user; player_action=cmd; arguments=[args]}
                   ())
-        (fun (code,body) -> (if code <> 200 then
+        (fun (_,body) -> (if body <> "Done." then
                             (add_announcements client_s [("Me",body)];
                             update_announcements client_s.announcements);
                             user_input_loop ()))
