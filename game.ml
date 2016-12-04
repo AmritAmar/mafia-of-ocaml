@@ -36,6 +36,22 @@ let rec get_mafia players mafia = match players with
     [] -> mafia
     | (x,y)::t -> if (y=Mafia) then get_mafia t (x^", "^mafia) else get_mafia t mafia
 
+let check st =
+    let check_victory st role = 
+        let check acc (_,x) = (x = Dead || x = role) && acc in 
+        List.fold_left check true st.players in
+
+    if (check_victory st Innocent) then
+        {st with stage = Game_Over;
+                 announcement_history = (Time.now (), (All,
+                 "Congratulations! The Innocents have won."))
+                 ::st.announcement_history}
+    else if (check_victory st Mafia) then 
+        {st with stage = Game_Over; 
+                 announcement_history = (Time.now (), (All,
+                 "Congratulations! The Mafias have won."))
+                 ::st.announcement_history} 
+    else st
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
  *)
@@ -218,27 +234,13 @@ let time_span state =
     | Discussion -> Core.Time.Span.minute
     | Night -> Core.Time.Span.minute
 
+
 let step_game st updates = 
     
-    let check_victory st role = 
-        let check acc (_,x) = (x = Dead || x = role) && acc in 
-        List.fold_left check true st.players
-    in
-
     (* maybe not most fluent game play if end check is here *)
-    if (check_victory st Innocent) then
-        {st with stage = Game_Over;
-                 announcement_history = (Time.now (), (All,
-                 "Congratulations! The Innocents have won."))
-                 ::st.announcement_history}
-    else if (check_victory st Mafia) then 
-        {st with stage = Game_Over; 
-                 announcement_history = (Time.now (), (All,
-                 "Congratulations! The Mafias have won."))
-                 ::st.announcement_history} 
-    else 
+
         match st.stage with 
-            | Night -> night_to_disc st updates
-            | Discussion -> disc_to_voting st updates
-            | Voting -> voting_to_night st updates
+            | Night -> night_to_disc st updates |> check
+            | Discussion -> disc_to_voting st updates |> check
+            | Voting -> voting_to_night st updates |> check
             | Game_Over -> st 
