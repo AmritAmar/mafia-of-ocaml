@@ -1,4 +1,5 @@
 open ANSITerminal
+open Client_state
 
 let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
 
@@ -381,7 +382,10 @@ let update_game_state day game_stage alive dead =
     (print_object 8 5 [magenta;Bold] 12 [game_stage];
     print_list 40 5 [red] 12 20 (remove_duplicates dead) 0)
   else
-    (print_object 8 5 [yellow] screen_height ["It is"];
+    (erase_box 23 3 30 1;
+    print_object 23 3 [Bold;yellow] screen_height ["ALIVE"];
+    print_object 40 3 [Bold;yellow] screen_height ["DEAD"];
+    print_object 8 5 [yellow] screen_height ["It is"];
     print_object 8 7 [yellow] screen_height ["time"];
     print_object 8 6 [magenta;Bold] 12 [game_stage];
     print_list 40 5 [red] 12 20 (remove_duplicates dead) 0);
@@ -421,18 +425,33 @@ let show_state_and_chat () =
   ()
 
 
+let prompt = "> "
+
 let new_prompt () =
   set_cursor 2 (screen_height-1);
   erase Eol;
-  print_string [] "> ";
-  flush_all ();
+  print_string [] prompt;
+  flush_all ()
 
-(*
-let () =
+let redraw_long_string s state =
+  let lines = String.(length s + length prompt - 1) / screen_width in
+  if lines > 0
+  then (erase Screen;
+       init ();
+       show_state_and_chat ();
+       update_game_state state.day_count state.game_stage state.alive_players state.dead_players;
+       update_announcements state.announcements;
+       set_cursor 1 screen_height;
+       erase Eol)
+
+
+(* let () =
   show_banner ();
   show_state_and_chat();
   update_announcements test_a;
   update_chat test_c;
   update_game_state (-1) "Lobby" alive dead;
+  update_game_state 5 "Discussion" alive dead;
   new_prompt ();
+
  *)

@@ -4,13 +4,12 @@ Tyler Ishikawa, Rachel Kwak, Michael Lucido, Irene (Euisun) Yoon
 
 ## Dependencies
 Before running the client or server, please make sure you have the following
-packages installed using opam:
+packages installed using opam. These are not installed on the 3110 VM by
+default.
 
 * async
 * cohttp
 * ansiterminal
-* yojson
-* lwt
 
 ## Running The Server
 The server can be run using the `make server` command. By default, the server

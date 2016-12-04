@@ -13,7 +13,7 @@ let help_string =
 
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
-  
+
 let make_uri base_url path room =
   let new_uri = Uri.of_string
                 (if Str.string_match (Str.regexp "^http://") base_url 0
@@ -101,9 +101,9 @@ let rec get_input_async f =
       >>> fun _ ->
       shutdown 0
     | `Ok len ->
-      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string)
-              |> String.trim
-      in
+      let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
+      redraw_long_string s client_s;
+      let s = String.trim s in
       new_prompt ();
       if s = "" then get_input_async f
       else
@@ -112,8 +112,7 @@ let rec get_input_async f =
                               | h::t::[] -> (String.lowercase_ascii h,t)
                               | _        -> ("","") (* not possible *)
         in
-        if (is_in first_word ["chat"; "ready"; "start";
-                              "vote"; "mafia-chat"; "help" ])
+        if is_in first_word ["chat";"ready";"start";"vote";"mafia-chat";"help"]
         then f (first_word,rest)
         else ((match client_s.announcements with
               | (_,h)::_ when h = help_string -> ()
@@ -136,7 +135,6 @@ let _ =
                         exit 0)
                    else Sys.argv.(1)
   in
-  init ();
   show_banner ();
   new_prompt ();
   upon (
@@ -149,13 +147,13 @@ let _ =
       let cmd,room = get_input ~commands:["join";"create"] () in
       client_s.room_id <- room;
       add_announcements client_s [("Me","Please enter a username that is <= "
-                                         ^ "15 characters long.")];
+                                         ^ "10 characters long.")];
       update_announcements client_s.announcements;
       let _,user = get_input () in
       client_s.player_id <- user;
       if cmd = "create"
       then (send_post (make_uri server_url "create_room" room) ()
-           >>= fun (code,body) -> 
+           >>= fun (code,body) ->
            if code <> 200
            then return (code,body)
            else (send_post
@@ -190,7 +188,7 @@ let _ =
                           arguments=[client_s.timestamp] }
                   ()
       in
-      upon get_update (fun (code,body) -> 
+      upon get_update (fun (code,body) ->
         (if code = 200 then
           let sj = decode_sjson body in
           let (new_state,new_msgs,new_a) = update_client_state client_s sj in
