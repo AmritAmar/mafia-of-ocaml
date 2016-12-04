@@ -152,7 +152,8 @@ let game_transition rd gs now =
     in 
 
     (* TODO: verify if these are sorted are not *)
-    let updates = List.fold ~init:[] ~f:collect_updates rd.action_buffer in 
+    let updates = List.rev 
+                    (List.fold ~init:[] ~f:collect_updates rd.action_buffer) in 
     let gs' = Game.step_game gs updates in 
     let t' = Time.add now (Game.time_span gs') in 
     eprintf "Game has transitioned to '%s'. Next Transition at: %s"
@@ -177,7 +178,8 @@ let transition_beat id now =
         | Some _ -> 
             try 
                 let (st',time) = transition rd now in 
-                Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = time};
+                Hashtbl.set rooms ~key:id ~data:{rd with state = st'; 
+                                                 transition_at = time};
                 ()
             with 
                 _ -> close_room id; ()
