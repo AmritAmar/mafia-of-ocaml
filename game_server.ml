@@ -28,12 +28,22 @@ type room_data = {
 type action_bundle = {id: string; rd: room_data; cd: client_json}
 exception Action_Error of (Server.response Deferred.t) 
 
+(* names that players cannot use as their player_id *)
 let reserved_names = ["All";"Innocent";"Mafia";"Player";"Me"]
 
+(* the master store of all the server rooms *)
 let rooms = String.Table.create () 
 
 (* [respond code msg] is an alias for Server.respond_with_string *)
 let respond code msg = Server.respond_with_string ~code:code msg 
+
+(* [raise_bad_request msg] raises an Action Error, with code 
+*  Bad_request and [msg] *)
+let raise_bad_request msg = 
+    raise (Action_Error (respond `Bad_request msg))
+
+(* how often to refresh the server state *)
+let beat_rate = Core.Std.sec 5.0
 
 (* [extract_id req] returns the value of the query 
  * param "room_id" if it is present and well formed.
@@ -45,6 +55,7 @@ let extract_id req =
     let uri = Cohttp.Request.uri req in 
     Uri.get_query_param uri "room_id"
 
+(* [print_room rd] prints the room information of room [rd] *)
 let print_room rd = 
     let cur_state = match rd.state with 
                         | Game _ -> "Game" 
@@ -72,6 +83,9 @@ let print_room rd =
 
 let timeout = Time.Span.of_sec 5.0
 
+(* [lobby_disconnect ls inactive] is the lobby state where all lobby members 
+ * of lobby [ls] in [inactive] are removed. If the admin of the lobby is in 
+ * [inactive], a new admin is chosen *)
 let lobby_disconnect ls inactive = 
     let is_active (pn,_) = not (List.mem inactive pn) in 
     let active = List.filter ls.players ~f:is_active in 
@@ -81,15 +95,22 @@ let lobby_disconnect ls inactive =
                         then {admin = pn; players = (pn,true)::t}
                         else {ls with players = active}   
 
+(* [game_disconnect gs inactive] is the game state where all game members 
+ * of game [gs] in [inactive] are removed. *)
 let game_disconnect gs inactive = 
    List.fold ~init:gs ~f:(Game.disconnect_player) inactive
 
+
+(* [close_room id] deletes room [id] from [rooms] *)
 let close_room id = 
     eprintf "Closing Room %s\n" id; 
-    Hashtbl.remove rooms id; 
-    () 
+    Hashtbl.remove rooms id
 
+(* [heart_beat id now] disconnects any players from room [id] 
+ * that have timed-out.
+ * Requires: [id] is within [rooms] *)
 let heart_beat id now = 
+    
     eprintf "\nChecking heartbeat... (%s) \n" id; 
     let rd = Hashtbl.find_exn rooms id in 
     print_room rd; 
@@ -116,19 +137,21 @@ let heart_beat id now =
     eprintf "Active: %n, Inactive: %n\n" 
                 (List.length active) (List.length inactive); 
 
-    if active = [] then close_room id (* everyone is gone, close the room *)
+    if active = [] 
+        (* everyone is gone, close the room *)
+        then close_room id
     else 
-    (* there should at least be one player in the room at this point*)
-    
-    let state' = match rd.state with 
-            | Lobby ls -> Lobby (lobby_disconnect ls inactive)
-            | Game gs -> Game (game_disconnect gs inactive) 
-    in 
+        (* there should at least be one player in the room at this point*)
+        let state' = match rd.state with 
+                | Lobby ls -> Lobby (lobby_disconnect ls inactive)
+                | Game gs -> Game (game_disconnect gs inactive) 
+        in 
 
-    Hashtbl.set rooms ~key:id ~data:{rd with state = state'; 
-                                             last_updated = active}; 
-    ()
+        Hashtbl.set rooms ~key:id ~data:{rd with state = state'; 
+                                                 last_updated = active}
 
+(* [lobby_transition ls now] steps the lobby to game_state [gs'] and returns
+ * the new [gs'] and the time of the next transition *)
 let lobby_transition ls now = 
     let players = List.fold ~init:[] 
                             ~f:(fun acc (pn,_) -> pn :: acc) 
@@ -139,6 +162,8 @@ let lobby_transition ls now =
     let t' = Time.add now (Game.time_span gs') in 
     (Game gs', Some t')
 
+(* [end_game gs] returns the server_state that results from bringing 
+ * [gs] into lobby mode *)
 let end_game (gs : game_state) = 
     eprintf ("\t Returning Game to Lobby\n");
     
@@ -156,11 +181,11 @@ let end_game (gs : game_state) =
     let players' = List.fold ~init:[] ~f:grab_players ply in 
     (Lobby {admin = admin'; players = players'}, None)
 
+(* [game_transition rd gs now] steps the game in [gs] to the next game_state. 
+ * Returns a new [gs'] and the time of the next transition *)
 let game_transition rd gs now = 
     if gs.stage = Game_Over then (end_game gs) else 
 
-    (* so... not really. This is close but not the real start time *
-      TODO: should we cache the real start time? *)
     let start = Time.sub now (Game.time_span gs) in 
 
     let collect_updates acc (t,cj) = 
@@ -168,9 +193,9 @@ let game_transition rd gs now =
                       else acc 
     in 
 
-    (* TODO: verify if these are sorted are not *)
-    let updates = List.rev 
-                    (List.fold ~init:[] ~f:collect_updates rd.action_buffer) 
+    let updates = List.rev (List.fold ~init:[] 
+                                      ~f:collect_updates 
+                                         rd.action_buffer) 
     in 
 
     let gs' = Game.step_game gs updates in 
@@ -182,11 +207,16 @@ let game_transition rd gs now =
 
     (Game gs', Some t')
 
+(* [transition rd now] is the stepped server_state of [rd] and the 
+ * the time to the next transition *)
 let transition rd now = 
     match rd.state with 
         | Lobby ls -> lobby_transition ls now
         | Game gs -> game_transition rd gs now
 
+(* [transition_beat] steps the server_state of room [rd] if it 
+ * is time to transition. If the room is empty, [transition_beat]
+ * closes the room. *)
 let transition_beat id now = 
     eprintf "\nChecking Transition Rules... (%s)\n" id;
     let rd = Hashtbl.find_exn rooms id in 
@@ -205,21 +235,25 @@ let transition_beat id now =
                                                          transition_at = time}
             with 
                 _ -> close_room id
-    
+(* [server_beat ()] runs [heart_beat] and [transition_beat] on every 
+ * active room in [rooms] *)
 let server_beat _ = 
     let now = Time.now () in 
     eprintf "Server Beat: %s \n" (Time.to_string_fix_proto `Utc now);
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> heart_beat id now);
     List.iter (Hashtbl.keys rooms) ~f:(fun id -> transition_beat id now)
 
+(* [daemon_action] steps the server. Intended to be used as manual 
+ * interface to [server_beat] *)
 let daemon_action _ _ _ = 
     server_beat ();
     respond `OK "Done."
 
+(* [run_daemon] steps the server every [beat_rate] seconds *)
 let rec run_daemon () =
   let helper =
     return (server_beat ()) >>= fun _ ->
-    after (Core.Std.sec 5.0)
+    after beat_rate
   in
     upon helper (fun _ -> run_daemon ())
 
@@ -247,9 +281,6 @@ let create_room _ req _ =
 
 (* ----------------------------------------------------- *)
 (* - Room Join: *)
-
-let raise_bad_request msg = 
-    raise (Action_Error (respond `Bad_request msg))
 
 (* [load_room req cd] returns an action_bundle using the room_id located within
  * the query paramaters of [req]. 
