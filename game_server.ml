@@ -503,7 +503,7 @@ let extract_players rd =
     in 
     
     match rd.state with 
-        | Lobby ls -> List.fold ~init: [] ~f: l_players ls.players
+        | Lobby ls -> List.fold ~init: [] ~f: l_players rd.last_updated
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
 let extract_announce cd rd last =     
