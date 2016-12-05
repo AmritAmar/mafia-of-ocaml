@@ -204,7 +204,7 @@ let split_word n str prevacc =
   let rec helper i lst s acc =
   match lst with
     | [] -> acc@[s]
-    | h::t when i=0 -> helper n t "" (acc@[s])
+    | _::t when i=0 -> helper n t "" (acc@[s])
     | h::t -> helper (i-1) t (s^(Char.escaped h)) acc
   in
   if prevacc = "" then
@@ -227,12 +227,12 @@ let split_string n str =
   let w =
     match word_list with
     | [] -> []
-    | h::t -> t in
+    | _::t -> t in
 
   let acc =
     match word_list with
     | [] -> ""
-    | h::t -> h in
+    | h::_ -> h in
 
   let rec helper w acc l =
     match w with
