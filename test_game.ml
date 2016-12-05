@@ -30,6 +30,8 @@ let latest_client_json1 =
 					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
 					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]}
 					]
+let vote_no_majority = handle_exec_vote init_state ["Irene";"Tyler";"Michael";"Rachel"]
+
 
 let game_tests = [
   "assign_roles" >:: (fun _ -> assert_equal 
@@ -37,7 +39,10 @@ let game_tests = [
     (assign_roles 0 [] id_lst (List.length id_lst)));
   "kill_player" >:: (fun _ -> assert_equal kill_irene
     (kill_player "Irene" plr_lst));
-
+  "handle_exec_vote_no_m" >:: (fun _ -> assert_equal plr_lst
+    (vote_no_majority.players));
+  "handle_exec_vote_no_m" >:: (fun _ -> assert_equal "No majority vote has occured. No one is being executed."
+    (vote_no_majority.announcement_history |> List.hd |> snd |> snd));
   "handle_exec_vote_inno1" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene.players));
   "handle_exec_vote_inno2" >:: (fun _ -> assert_equal 

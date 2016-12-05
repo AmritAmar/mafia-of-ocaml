@@ -1,5 +1,5 @@
 open Yojson.Basic.Util
-open Str
+open Strc
 open Data
 open Core
 
@@ -38,18 +38,18 @@ let rec get_mafia players mafia = match players with
                     then get_mafia t (x^", "^mafia) 
                     else get_mafia t mafia
 
-let check st =
+let check old_st st =
     let check_victory st role = 
         let check acc (_,x) = (x = Dead || x = role) && acc in 
         List.fold_left check true st.players in
 
     if (check_victory st Innocent) then
-        {st with stage = Game_Over;
+        {old_st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
                  ::st.announcement_history}
     else if (check_victory st Mafia) then 
-        {st with stage = Game_Over; 
+        {old_st with stage = Game_Over; 
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafias have won."))
                  ::st.announcement_history} 
@@ -243,7 +243,7 @@ let step_game st updates =
     (* maybe not most fluent game play if end check is here *)
 
         match st.stage with 
-            | Night -> night_to_disc st updates |> check
-            | Discussion -> disc_to_voting st updates |> check
-            | Voting -> voting_to_night st updates |> check
+            | Night -> night_to_disc st updates |> check st
+            | Discussion -> disc_to_voting st updates |> check st
+            | Voting -> voting_to_night st updates |> check st
             | Game_Over -> st 
