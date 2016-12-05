@@ -1,19 +1,6 @@
 open ANSITerminal
 open Client_state
 
-let dead = [ "Tyler"; "Irene"; "Michael"; "Rachel" ]
-
-let alive = [ "Clarkson" ; "Myers"; "Myers" ]
-
-let test_a = [("ALL","example announcement");
-("MAFIA","example announcement for only mafia");
-("ME","this is an announcement that only I can see")]
-
-
-let test_c = [("All", "Myers","I think you are the mafia");
-("Mafia","Clarkson","I don't think I am the mafia");
-("all","Myers","cool")]
-
 let scroll = [
 "                                               .---.";
 "                                              /  .  \\";
@@ -199,12 +186,19 @@ let screen_width = 100
 
 let screen_height = 41
 
+(* [explode s] converts a string to a character list
+ * source: https://caml.inria.fr/pub/old_caml_site/Examples/oc/basics/explode.ml
+ *)
 let explode s =
   let rec expl i l =
     if i < 0 then l else
     expl (i - 1) (s.[i] :: l) in
   expl (String.length s - 1) []
 
+(* [split_word n str prevacc] splits a long word into a list of strings of size
+ * n. If there is a previous accumulator, it accounts for that into the total
+ * length.
+ *)
 let split_word n str prevacc =
   let charlist = explode str in
   let rec helper i lst s acc =
@@ -222,7 +216,7 @@ let split_word n str prevacc =
 (* [split_string n str] inputs a string [str] and splits it into a list of
  * strings that are at most [n] characters long where n > 0.
  * precondition: n > 0
-*)
+ *)
 let split_string n str =
   let word_list =
     match Str.split (Str.regexp "[ \t\n]+") str with
@@ -253,7 +247,7 @@ let split_string n str =
 
 (* [print_object x y style endline arr] prints a list of strings [arr] at coord
  * [x],[y] in the style of [style]. If it reaches [endline] it stops printing.
-*)
+ *)
 let rec print_object x y style endline arr =
   match arr with
   | [] -> ()
@@ -267,7 +261,7 @@ let rec print_object x y style endline arr =
  * each string into a list of strings of a certain length, and prints them with
  * at coordinates [x],[y] with style [style] and [skip] number of breaks. If it
  * reaches [endline] it stops printing.
-*)
+ *)
 let rec print_list x y style endline n lst skip =
   match lst with
   | [] -> ()
@@ -278,7 +272,7 @@ let rec print_list x y style endline n lst skip =
 
 (* [erase_box x y width height] erases everything on the screen at coordinates
  * [x],[y] spanning [width] and [height].
-*)
+ *)
 let erase_box x y width height =
   let spaces = String.make width ' ' in
   let lst = let rec fill h =
@@ -289,6 +283,11 @@ let erase_box x y width height =
   print_object x y [] screen_height lst;
   ()
 
+(* [print_message x y style endline arr] takes in a list of chat message strings
+ * and breaks each of them into a list of strings of a certain length. It then
+ * prints the strings from down to up starting at coordinates [x],[y] with
+ * style [style].
+ *)
 let rec print_message x y style endline arr =
   match arr with
   | [] -> ()
@@ -303,6 +302,9 @@ let asnd (_,y,_) = y
 
 let athrd (_,_,z) = z
 
+(* [print_chat x y style1 style2 endline n1 n2 lst] prints chat messages at
+ * coordinates [x],[y] with usernames in [style1] and messages in [style2].
+ *)
 let rec print_chat x y style1 style2 endline n1 n2 lst =
   match lst with
   | [] -> ()
@@ -311,16 +313,14 @@ let rec print_chat x y style1 style2 endline n1 n2 lst =
             let user = split_string n1 (asnd h) in
             let chat = split_string n2 (athrd h) in
             let len = max (List.length user) (List.length chat) in
-  if (List.length user) > (List.length chat) then
-    (print_message x y style1 endline (List.rev user);
-    print_message (x+n1+2) (y-len+(List.length chat)) style3 endline (List.rev chat);
-    print_chat x (y-len-1) style1 style2 endline n1 n2 t)
-  else
     (print_message x (y-len+(List.length user)) style1 endline (List.rev user);
     print_message (x+n1+2) y style3 endline (List.rev chat);
     print_chat x (y-len-1) style1 style2 endline n1 n2 t)
 
-
+(* [print_a x y endline n lst skip] prints announcements at coordinates [x],[y]
+ * in different colors depending on whether its for everyone, innocents, mafia,
+ * or just the player.
+ *)
 let rec print_a x y endline n lst skip =
   match lst with
   | [] -> ()
@@ -355,13 +355,15 @@ let update_chat log =
   restore_cursor();
   ()
 
+(* [scheme day game_stage wall p scroll log chat] changes the color scheme of
+ * the page given [wall], [p], [scroll], [log], and [chat]
+ *)
 let scheme day game_stage wall p scroll log chat =
   print_object 62 1 wall screen_height brick_wall;
   print_object 65 4 p screen_height paper;
   print_object 1 1 scroll screen_height game_state;
   print_object 3 14 log screen_height chat_log;
   print_object 73 6 [Bold;black;on_white] screen_height [" ANNOUNCEMENTS "];
-  print_object 8 3 ([Bold]@scroll) screen_height ["DAY"];
   print_object 40 15 ([Bold;white]@chat) screen_height [" CHAT LOG "];
   if String.uppercase_ascii game_stage = "LOBBY" then
     (erase_box 23 3 30 1;
@@ -369,18 +371,18 @@ let scheme day game_stage wall p scroll log chat =
     print_object 8 5 scroll screen_height ["You are now";"in the"];
     print_object 8 7 [magenta;Bold] 12 [game_stage])
   else if String.uppercase_ascii game_stage = "GAME OVER" then
-    (print_object 12 3 [blue;Bold] 12 [string_of_int day];
-    print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
-    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
-    print_object 8 5 [magenta;Bold] 12 [game_stage];)
+    print_object 8 5 [magenta;Bold] 12 [game_stage]
   else
     (erase_box 23 3 30 1;
-    print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
-    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
     print_object 8 5 scroll screen_height ["It is"];
     print_object 8 7 scroll screen_height ["time"];
-    print_object 8 6 [magenta;Bold] 12 [game_stage];
-    print_object 12 3 [blue;Bold] 12 [string_of_int day]);
+    print_object 8 6 [magenta;Bold] 12 [game_stage]);
+
+  if String.uppercase_ascii game_stage <> "LOBBY" then
+    print_object 8 3 ([Bold]@scroll) screen_height ["DAY"];
+    print_object 12 3 [blue;Bold] 12 [string_of_int day];
+    print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
+    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
   ()
 
 let update_game_state cs =
@@ -395,11 +397,13 @@ let update_game_state cs =
   if String.uppercase_ascii game_stage = "LOBBY" then
     scheme day game_stage [magenta] [] [yellow] [blue] [on_blue]
   else if String.uppercase_ascii game_stage = "GAME OVER" then
-    scheme day game_stage [blue] [] [green] [magenta] [on_magenta]
+    scheme day game_stage [blue] [] [white] [magenta] [on_magenta]
   else if String.uppercase_ascii game_stage = "DISCUSSION" then
     scheme day game_stage [yellow] [magenta] [cyan] [green] [on_green]
   else if String.uppercase_ascii game_stage = "VOTING" then
-    scheme day game_stage [green] [blue] [blue] [yellow] [on_yellow];
+    scheme day game_stage [green] [blue] [blue] [yellow] [on_yellow]
+  else if String.uppercase_ascii game_stage = "NIGHT" then
+    scheme day game_stage [white] [] [magenta] [cyan] [on_cyan];
 
   if String.uppercase_ascii game_stage <> "LOBBY" then
     print_list 40 5 [red] 12 20 dead 0;
@@ -409,7 +413,6 @@ let update_game_state cs =
   update_announcements cs.announcements;
   update_chat cs.msgs;
   ()
-
 
 
 let init () =
@@ -458,11 +461,17 @@ let redraw_long_string s state =
        erase Eol)
 
 
-(*
-let () =
+
+(* let () =
   show_banner ();
   show_state_and_chat();
-  update_game_state (-1) "Lobby" alive dead;
-  new_prompt ();
+  scheme 5 "Lobby" [magenta] [] [yellow] [blue] [on_blue];
 
- *)
+  scheme 4 "Game Over" [blue] [] [white] [magenta] [on_magenta];
+  scheme 3 "Discussion" [yellow] [magenta] [cyan] [green] [on_green];
+  scheme 2 "Voting" [green] [blue] [blue] [yellow] [on_yellow];
+  scheme 5 "Night" [white] [] [magenta] [cyan] [on_cyan];
+
+  new_prompt (); *)
+
+
