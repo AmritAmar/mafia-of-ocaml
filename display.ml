@@ -410,14 +410,17 @@ let scheme day game_stage wall p scroll log chat =
     print_object 12 3 [blue;Bold] 12 [string_of_int day]);
   ()
 
-let update_game_state day game_stage alive dead =
+let update_game_state cs =
+  let day = cs.day_count in
+  let game_stage = cs.game_stage in
+  let alive = Str_set.elements cs.alive_players in
+  let dead = cs.dead_players in
   save_cursor();
   erase_box 12 3 4 1;
   erase_box 8 5 11 3;
   erase_box 21 5 33 7;
   if String.uppercase_ascii game_stage = "LOBBY" then
     scheme day game_stage [magenta] [] [yellow] [blue] [on_blue]
-
   else if String.uppercase_ascii game_stage = "GAME OVER" then
     scheme day game_stage [blue] [] [green] [magenta] [on_magenta]
   else if String.uppercase_ascii game_stage = "DISCUSSION" then
@@ -429,6 +432,8 @@ let update_game_state day game_stage alive dead =
     print_list 40 5 [red] 12 20 (remove_duplicates dead) 0;
 
   print_list 23 5 [green] 12 20 (remove_duplicates alive) 0;
+  update_announcements cs.announcements;
+  update_chat cs.msgs;
   restore_cursor();
   ()
 
@@ -474,7 +479,7 @@ let redraw_long_string s state =
   then (erase Screen;
        init ();
        show_state_and_chat ();
-       update_game_state state.day_count state.game_stage (Str_set.elements state.alive_players) state.dead_players;
+       update_game_state state;
        update_announcements state.announcements;
        set_cursor 1 screen_height;
        erase Eol)
