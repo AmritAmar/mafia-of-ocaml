@@ -113,7 +113,7 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
                 (All,
                 voted ^ " was voted guilty and has been executed.\n" ^
                 voted ^ " was a member of the Mafia! Nice work!")
-                
+
     in
     {st with players = kill_player voted st.players;
              announcement_history = (now, (Player voted,
