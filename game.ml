@@ -1,5 +1,5 @@
 open Yojson.Basic.Util
-open Strc
+open Str
 open Data
 open Core
 
