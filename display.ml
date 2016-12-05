@@ -194,20 +194,6 @@ let paper = [
 "|                             |";
 "|_____________________________|"]
 
-let gameover = [
-"  ______       ___       ___  ___   _______  ";
-" /  ____|     /   \\     |   \\/   | |   ____| ";
-"|  |  __     /  ^  \\    |  \\  /  | |  |__    ";
-"|  | |_ |   /  /_\\  \\   |  |\\/|  | |   __|   ";
-"|  |__| |  /  _____  \\  |  |  |  | |  |____  ";
-" \\______| /__/     \\__\\ |__|  |__| |_______| ";
-
-"  ______   ____    ____  _______   ______   ";
-" /  __  \\  \\   \\  /   / |   ____| |   _  \\  ";
-"|  |  |  |  \\   \\/   /  |  |__    |  |_)  | ";
-"|  |  |  |   \\      /   |   __|   |      /  ";
-"|  `--'  |    \\    /    |  |____  |  |\\  \\  ";
-" \\______/      \\__/     |_______| |__| \\__\\ ";]
 
 let screen_width = 100
 
@@ -355,19 +341,6 @@ let rec print_a x y endline n lst skip =
               (print_object x y [cyan] endline (split_string n (snd h));
               print_a x (y+len+skip) endline n t skip)
 
-let remove_elt e l =
-  let rec go l acc = match l with
-    | [] -> List.rev acc
-    | x::xs when e = x -> go xs acc
-    | x::xs -> go xs (x::acc)
-  in go l []
-
-let remove_duplicates l =
-  let rec go l acc = match l with
-    | [] -> List.rev acc
-    | x :: xs -> go (remove_elt x xs) (x::acc)
-  in go l []
-
 let update_announcements a =
   save_cursor();
   erase_box 68 8 25 27;
@@ -429,9 +402,9 @@ let update_game_state cs =
     scheme day game_stage [green] [blue] [blue] [yellow] [on_yellow];
 
   if String.uppercase_ascii game_stage <> "LOBBY" then
-    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0;
+    print_list 40 5 [red] 12 20 dead 0;
 
-  print_list 23 5 [green] 12 20 (remove_duplicates alive) 0;
+  print_list 23 5 [green] 12 20 alive 0;
   restore_cursor();
   update_announcements cs.announcements;
   update_chat cs.msgs;
