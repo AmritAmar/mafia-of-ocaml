@@ -512,8 +512,9 @@ let write_game ab =
 
     match rd.state with 
         | Game _ -> raise_bad_request "Game already in progress"
-        | Lobby _ ->
-           transition_beat id (Time.now ()); 
+        | Lobby ls ->
+           let (st', t') = lobby_transition ls (Time.now ()) in 
+           Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'}; 
            eprintf "(%s) entering Game Mode\n" id; 
            respond `OK "Done."
 
@@ -587,7 +588,6 @@ let player_action _ req body =
                                |> in_living 
                                |> can_vote 
                                |> write_vote 
-
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
