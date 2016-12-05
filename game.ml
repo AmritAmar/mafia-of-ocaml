@@ -41,18 +41,19 @@ let rec get_mafia players mafia = match players with
 let check old_st st =
     let check_victory st role = 
         let check acc (_,x) = (x = Dead || x = role) && acc in 
-        List.fold_left check true st.players in
+        List.fold_left check true st.players 
+    in
 
     if (check_victory st Innocent) then
         {old_st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
-                 ::st.announcement_history}
+                 ::old_st.announcement_history}
     else if (check_victory st Mafia) then 
         {old_st with stage = Game_Over; 
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafias have won."))
-                 ::st.announcement_history} 
+                 ::old_st.announcement_history} 
     else st
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
