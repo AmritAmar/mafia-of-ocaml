@@ -494,15 +494,18 @@ let is_admin ab =
 let all_ready ab =
      let rd = ab.rd in 
 
-     let check_ready acc (_,ready) = acc && ready in 
+     let check_ready (acc, unready) (pn,ready) = 
+         if ready then (acc && ready, unready)
+         else (acc && ready, unready ^ " " ^ pn)
+     in 
 
      match rd.state with 
         | Game _ -> raise_bad_request "Players Already in Game"
         | Lobby ls -> 
-            let ready = List.fold ~init:true ~f:check_ready ls.players in 
+            let (ready,unready) = List.fold ~init:(true,"") ~f:check_ready ls.players in 
             if ready then ab 
             else 
-                raise_bad_request "Not all players are ready."
+                raise_bad_request ("Not all players are ready. Unready:" ^ unready)
 
 (* [write_game ab] moves a game from lobby mode into game mode, 
  * and launches the associated game_state daemons. 
