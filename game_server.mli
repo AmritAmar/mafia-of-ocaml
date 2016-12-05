@@ -1,35 +1,56 @@
-
-(* TODO: Fix server.mli *)
-
-(*
 open Core.Std
-open Cohttp
-open Cohttp_async
-open Game
+open Async.Std
+open Cohttp 
+open Cohttp_async 
 
-type room_id = string
+open Data 
+open Game 
 
-(** [games] is an association list mapping current room ids to 
-  * game states*)
-type games = room_id * state list
+type lobby_state = {
+    admin : string;
+    players : (string * bool) list; 
+}
 
-(** [create_room] creates a room given a cohttp request and async body *)
-val create_room : games -> Cohttp.Request.t ->  Cohttp_async_body.t -> games
+type server_state = 
+   | Lobby of lobby_state 
+   | Game of game_state  
 
-(** [join_room] adds a player to a room given a cohttp request and 
-  * async body *)
-val join_room : games -> Cohttp.Request.t ->  Cohttp_async_body.t -> games
+type chat_message = (channel * player_name * string)
+and channel = General | Mafia 
 
-(** [player_action] updates a game state according to player action
-  * returns games *)
-val player_action : games -> Cohttp.Request.t ->  Cohttp_async_body.t -> games
+type room_data = {
+    state: server_state;  
+    transition_at: timestamp option; 
+    last_updated: (string * timestamp) list;  
+    chat_buffer: (timestamp * chat_message) list;
+    action_buffer: (timestamp * client_json) list;
+}
 
-(** [room_status] updates a game state according to player action and 
-  * returns a state *)
-val room_status : games -> Cohttp.Request.t ->  Cohttp_async_body.t -> state
-	
-(**
- * [server] is a simple cohttp server that outputs back request information.
- *)
-val server : conn -> Cohttp.Request.t -> Cohttp_async_body.t -> (Cohttp.Response.t * Cohttp_async_body.t) Async.t
-*)
+type action_bundle = {id: string; rd: room_data; cd: client_json}
+exception Action_Error of (Server.response Deferred.t) 
+
+(* [daemon_action conn req body] is a manual trigger for the server 
+ * daemon process.*)
+val daemon_action: 'a -> Request.t -> Body.t -> Server.response Deferred.t
+
+(* [create_room conn req body] creates a new game room using the supplied
+ * information, given that it is valid. *)
+val create_room: 'a -> Request.t -> Body.t -> Server.response Deferred.t
+
+(* [join_room conn req body] adds the player to their chosen room, if their 
+ * configuration is valid. *)
+val join_room: 'a -> Request.t -> Body.t -> Server.response Deferred.t
+
+(* [player_action conn req body] applies the supplied player_action 
+ * to the game state if it is valid *)
+val player_action: 'a -> Request.t -> Body.t -> Server.response Deferred.t
+
+(* [room_status conn req body] fetches the current room status. *)
+val room_status: 'a -> Request.t -> Body.t -> Server.response Deferred.t
+
+(* [handler body conn req] routes all incoming requests to the 
+ * appropriate endpoints *)
+val handler: body:Body.t -> 'a -> Request.t -> Server.response Deferred.t
+
+(* [start_server] starts the server on the given port *)
+val start_server: int -> unit -> 'a Deferred.t

@@ -9,6 +9,7 @@ let test_a = [("ALL","example announcement");
 ("MAFIA","example announcement for only mafia");
 ("ME","this is an announcement that only I can see")]
 
+
 let test_c = [("All", "Myers","I think you are the mafia");
 ("Mafia","Clarkson","I don't think I am the mafia");
 ("all","Myers","cool")]
@@ -193,6 +194,20 @@ let paper = [
 "|                             |";
 "|_____________________________|"]
 
+let gameover = [
+"  ______       ___       ___  ___   _______  ";
+" /  ____|     /   \\     |   \\/   | |   ____| ";
+"|  |  __     /  ^  \\    |  \\  /  | |  |__    ";
+"|  | |_ |   /  /_\\  \\   |  |\\/|  | |   __|   ";
+"|  |__| |  /  _____  \\  |  |  |  | |  |____  ";
+" \\______| /__/     \\__\\ |__|  |__| |_______| ";
+
+"  ______   ____    ____  _______   ______   ";
+" /  __  \\  \\   \\  /   / |   ____| |   _  \\  ";
+"|  |  |  |  \\   \\/   /  |  |__    |  |_)  | ";
+"|  |  |  |   \\      /   |   __|   |      /  ";
+"|  `--'  |    \\    /    |  |____  |  |\\  \\  ";
+" \\______/      \\__/     |_______| |__| \\__\\ ";]
 
 let screen_width = 100
 
@@ -367,37 +382,62 @@ let update_chat log =
   restore_cursor();
   ()
 
-let update_game_state day game_stage alive dead =
+let scheme day game_stage wall p scroll log chat =
+  print_object 62 1 wall screen_height brick_wall;
+  print_object 65 4 p screen_height paper;
+  print_object 1 1 scroll screen_height game_state;
+  print_object 3 14 log screen_height chat_log;
+  print_object 73 6 [Bold;black;on_white] screen_height [" ANNOUNCEMENTS "];
+  print_object 8 3 ([Bold]@scroll) screen_height ["DAY"];
+  print_object 40 15 ([Bold;white]@chat) screen_height [" CHAT LOG "];
+  if String.uppercase_ascii game_stage = "LOBBY" then
+    (erase_box 23 3 30 1;
+    print_object 23 3 ([Bold]@scroll) screen_height ["CONNECTED"];
+    print_object 8 5 scroll screen_height ["You are now";"in the"];
+    print_object 8 7 [magenta;Bold] 12 [game_stage])
+  else if String.uppercase_ascii game_stage = "GAME OVER" then
+    (print_object 12 3 [blue;Bold] 12 [string_of_int day];
+    print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
+    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
+    print_object 8 5 [magenta;Bold] 12 [game_stage];)
+  else
+    (erase_box 23 3 30 1;
+    print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
+    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
+    print_object 8 5 scroll screen_height ["It is"];
+    print_object 8 7 scroll screen_height ["time"];
+    print_object 8 6 [magenta;Bold] 12 [game_stage];
+    print_object 12 3 [blue;Bold] 12 [string_of_int day]);
+  ()
+
+let update_game_state cs =
+  let day = cs.day_count in
+  let game_stage = cs.game_stage in
+  let alive = Str_set.elements cs.alive_players in
+  let dead = cs.dead_players in
   save_cursor();
   erase_box 12 3 4 1;
   erase_box 8 5 11 3;
   erase_box 21 5 33 7;
-  if day >= 0 then print_object 12 3 [blue;Bold] 12 [string_of_int day];
   if String.uppercase_ascii game_stage = "LOBBY" then
-    (print_object 8 5 [yellow] screen_height ["You are now";"in the"];
-    print_object 8 7 [magenta;Bold] 12 [game_stage];
-    erase_box 23 3 30 1;
-    print_object 23 3 [Bold;yellow] screen_height ["CONNECTED"];)
+    scheme day game_stage [magenta] [] [yellow] [blue] [on_blue]
   else if String.uppercase_ascii game_stage = "GAME OVER" then
-    (print_object 8 5 [magenta;Bold] 12 [game_stage];
-    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0)
-  else
-    (erase_box 23 3 30 1;
-    print_object 23 3 [Bold;yellow] screen_height ["ALIVE"];
-    print_object 40 3 [Bold;yellow] screen_height ["DEAD"];
-    print_object 8 5 [yellow] screen_height ["It is"];
-    print_object 8 7 [yellow] screen_height ["time"];
-    print_object 8 6 [magenta;Bold] 12 [game_stage];
-    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0);
+    scheme day game_stage [blue] [] [green] [magenta] [on_magenta]
+  else if String.uppercase_ascii game_stage = "DISCUSSION" then
+    scheme day game_stage [yellow] [magenta] [cyan] [green] [on_green]
+  else if String.uppercase_ascii game_stage = "VOTING" then
+    scheme day game_stage [green] [blue] [blue] [yellow] [on_yellow];
+
+  if String.uppercase_ascii game_stage <> "LOBBY" then
+    print_list 40 5 [red] 12 20 (remove_duplicates dead) 0;
+
   print_list 23 5 [green] 12 20 (remove_duplicates alive) 0;
   restore_cursor();
+  update_announcements cs.announcements;
+  update_chat cs.msgs;
   ()
 
-(* let lobby_scheme () =
-  erase Screen;
 
-
-let game_over_scheme () = *)
 
 let init () =
   resize screen_width screen_height;
@@ -439,19 +479,17 @@ let redraw_long_string s state =
   then (erase Screen;
        init ();
        show_state_and_chat ();
-       update_game_state state.day_count state.game_stage state.alive_players state.dead_players;
+       update_game_state state;
        update_announcements state.announcements;
        set_cursor 1 screen_height;
        erase Eol)
 
 
-(* let () =
+(*
+let () =
   show_banner ();
   show_state_and_chat();
-  update_announcements test_a;
-  update_chat test_c;
   update_game_state (-1) "Lobby" alive dead;
-  update_game_state 5 "Discussion" alive dead;
   new_prompt ();
 
  *)

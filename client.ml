@@ -49,8 +49,8 @@ let send_post uri ?data () =
 let client_s = { player_id="";
                  room_id="";
                  day_count=0;
-                 game_stage="";
-                 alive_players=[];
+                 game_stage="Lobby";
+                 alive_players=Client_state.Str_set.empty;
                  dead_players=[];
                  timestamp="";
                  msgs=[];
@@ -172,7 +172,7 @@ let _ =
                                 ("Me","Joined lobby for room "
                                        ^ client_s.room_id);
                                ];
-    show_state_and_chat ();
+    update_game_state client_s;
     add_announcements client_s [("Me",help_string)];
     update_announcements client_s.announcements;
     new_prompt ();
@@ -192,10 +192,7 @@ let _ =
         (if code = 200 then
           let sj = decode_sjson body in
           let (new_state,new_msgs,new_a) = update_client_state client_s sj in
-          if new_state then update_game_state client_s.day_count
-                                              client_s.game_stage
-                                              client_s.alive_players
-                                              client_s.dead_players;
+          if new_state then update_game_state client_s;
           if new_msgs then update_chat client_s.msgs;
           if new_a then update_announcements client_s.announcements;
         );
@@ -211,7 +208,7 @@ let _ =
         else upon (send_post (make_uri server_url "player_action" room)
                   ~data:{player_id=user; player_action=cmd; arguments=[args]}
                   ())
-        (fun (code,body) -> (if code <> 200 then
+        (fun (_,body) -> (if body <> "Done." then
                             (add_announcements client_s [("Me",body)];
                             update_announcements client_s.announcements);
                             user_input_loop ()))
