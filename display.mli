@@ -36,11 +36,6 @@ val new_prompt : unit -> unit
 val show_banner : unit -> unit
 
 (**
- * Show state and chat area.
- *)
-val show_state_and_chat : unit -> unit
-
-(**
  * If the user input is longer than one line, erase the screen and redraw
  * everything
  *)
