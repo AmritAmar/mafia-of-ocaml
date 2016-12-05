@@ -8,11 +8,11 @@ open Client_state
 val update_chat : (string * string * string) list -> unit
 
 (**
- * [update_game_state day game_stage alive dead] will update the display of
- * the game state with the given parameters. Returns the cursor to its
+ * [update_game_state cs] will update the display of the game state with the
+ * info in the given client_state record. Returns the cursor to its
  * position before this function was called.
  *)
-val update_game_state : int -> string -> string list -> string list -> unit
+val update_game_state : client_state -> unit
 
 (**
  * Updates the announcements displayed, replacing the old announcements with
