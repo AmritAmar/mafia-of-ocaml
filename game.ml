@@ -15,10 +15,10 @@ type game_stage = Night | Discussion | Voting | Game_Over
 
 (** [state] is the game state of the mafia_of_ocaml game *)
 type game_state = {
-	day_count : int;
-	stage : game_stage;
-	players : (player_name * role) list;
-	announcement_history : (timestamp * announcement) list
+  day_count : int;
+  stage : game_stage;
+  players : (player_name * role) list;
+  announcement_history : (timestamp * announcement) list
 }
 
 (*
