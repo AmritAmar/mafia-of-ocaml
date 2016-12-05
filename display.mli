@@ -16,7 +16,7 @@ val update_game_state : client_state -> unit
 
 (**
  * Updates the announcements displayed, replacing the old announcements with
- * the given list of string tuples.  Returns the cursor to its position before
+ * the given list of string tuples. Returns the cursor to its position before
  * this function was called.
  *)
 val update_announcements : (string * string) list -> unit

@@ -3,14 +3,16 @@ open Data
 
 let data_tests = [
   "encode_sjson" >:: (fun _ -> assert_equal
-    ("{\"day_count\":5,\"game_stage\":\"NIGHT\",\"active_players\":"
+    ("{\"day_count\":5,\"game_stage\":\"Night\",\"active_players\":"
     ^ "[\"Tyler\",\"Rachel\"],\"new_announcements\":[],\"new_messages\":"
-    ^ "[\"Tyler: dank meme\"]}")
+    ^ "[{\"target\":\"mafia\",\"player_id\":\"Tyler\",\"message\":"
+    ^ "\"dank meme\"}],\"timestamp\":\"today\"}")
     (encode_sjson { day_count=5;
-                    game_stage="NIGHT";
+                    game_stage="Night";
                     active_players=["Tyler";"Rachel"];
                     new_announcements=[];
-                    new_messages=["Tyler: dank meme"] })
+                    new_messages=[("mafia","Tyler","dank meme")];
+                    timestamp="today" })
     );
   "encode_cjson" >:: (fun _ -> assert_equal
     ("{\"player_id\":\"Tyler\",\"player_action\":\"CHAT\",\"arguments\":"
@@ -23,14 +25,17 @@ let data_tests = [
     { day_count=15;
       game_stage="VOTING";
       active_players=["Michael";"Irene"];
-      new_announcements=["Fresh dank memes are available. "
-                         ^ "Get them while they're hot!"];
-      new_messages=["Irene: lel"] }
+      new_announcements=[("ALL","Fresh dank memes are available. "
+                                ^ "Get them while they're hot!")];
+      new_messages=[("ALL","Irene","lel")];
+      timestamp="YESTERDAY" }
     (decode_sjson
       ("{\"day_count\":15,\"game_stage\":\"VOTING\",\"active_players\":"
-      ^ "[\"Michael\",\"Irene\"],\"new_announcements\":[\"Fresh dank memes "
-      ^ "are available. Get them while they're hot!\"],\"new_messages\":"
-      ^ "[\"Irene: lel\"]}"))
+      ^ "[\"Michael\",\"Irene\"],\"new_announcements\":[{\"type\":\"ALL\","
+      ^ "\"text\":\"Fresh dank memes are available. Get them while they're "
+      ^ "hot!\"}],\"new_messages\":"
+      ^ "[{\"target\":\"ALL\",\"player_id\":\"Irene\",\"message\":\"lel\"}],"
+      ^ "\"timestamp\":\"YESTERDAY\"}"))
     );
   "decode_cjson" >:: (fun _ -> assert_equal
     { player_id="Tyler Compiler";
