@@ -45,6 +45,8 @@ let raise_bad_request msg =
 (* how often to refresh the server state *)
 let beat_rate = Core.Std.sec 5.0
 
+let timeout = Time.Span.of_sec 10.
+
 (* [extract_id req] returns the value of the query 
  * param "room_id" if it is present and well formed.
  * Requires: query param is in form /?room_id={x}
@@ -80,8 +82,6 @@ let print_room rd =
 
 (* ----------------------------------------------------- *)
 (* - Daemon: *)
-
-let timeout = Time.Span.of_sec 5.0
 
 (* [lobby_disconnect ls inactive] is the lobby state where all lobby members 
  * of lobby [ls] in [inactive] are removed. If the admin of the lobby is in 
@@ -401,7 +401,8 @@ let in_living ab =
 
     let in_living = match rd.state with 
                         | Lobby _ -> true 
-                        | Game gs -> Game.is_alive pn gs 
+                        | Game gs -> 
+                            Game.is_alive pn gs || gs.stage = Game_Over
 
     in 
 
@@ -587,8 +588,8 @@ let player_action _ req body =
                 );
            
             match cd.player_action with 
-                | "chat" -> ab |> in_living 
-                               |> can_chat 
+                | "chat" -> ab |> can_chat
+                               |> in_living
                                |> write_chat General
 
                 | "mafia-chat" -> ab |> in_living 

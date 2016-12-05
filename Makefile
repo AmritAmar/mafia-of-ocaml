@@ -2,6 +2,7 @@ default:
 	@echo "Usage:"
 	@echo "  make test                      runs tests"
 	@echo "  make client URL=[server URL]   runs client and connects to server"
+	@echo "  make client-default            runs client and connects to remote server"
 	@echo "  make server                    runs server"
 	@echo "  make game                      runs game"
 	@echo "  make test_game                 runs test_game"
