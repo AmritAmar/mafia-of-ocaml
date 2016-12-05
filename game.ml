@@ -45,12 +45,12 @@ let check old_st st =
     in
 
     if (check_victory st Innocent) then
-        {old_st with stage = Game_Over;
+        {st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
                  ::old_st.announcement_history}
     else if (check_victory st Mafia) then
-        {old_st with stage = Game_Over;
+        {st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafia has won."))
                  ::old_st.announcement_history}
@@ -166,7 +166,7 @@ let night_to_disc st updates =
     {day_count = st.day_count+1; stage = Discussion;
         players = updated_players;
         announcement_history = (Time.now (), (All,
-             "Good Morning! Last night, "^victim^
+             "Good Morning! Last night innocent citizen ,"^victim^
              " was killed in their sleep by the Mafia :( RIP."))
              ::st.announcement_history}
 
@@ -190,10 +190,12 @@ let voting_to_night st updates =
             [] updates |> latest_votes [] |> List.map (fun x -> x.arguments)
             |> List.concat |> handle_exec_vote st
          in
-    {s with stage = Night;
-             announcement_history = (Time.now (), (All,
-             "Its night time now - go sleep unless you "^
-             "have someone to visit :)"))
+    {s with stage = Night; 
+             announcement_history = (Time.now (), (Mafias,
+             "It's night time now! Please vote on an innocent citizen to "^
+             "kill tonight :)"))
+             ::(Time.now (), (Innocents,
+             "Its night time now - good night :)"))
              ::s.announcement_history}
 
 let string_of_stage = function
