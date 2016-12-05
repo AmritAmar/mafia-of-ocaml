@@ -7,12 +7,14 @@ Before running the client or server, please make sure you have the following
 packages installed using opam. These are not installed on the 3110 VM by
 default.
 
+* core
 * async
 * cohttp
 * ANSITerminal
 
 Note, that due to platform-specific issues with ANSITerminal on MacOS and 
-Windows, we recommend using the CS 3110 VM when running the program suite. 
+Windows, we **strongly recommend** using the CS 3110 VM when running the program suite. 
+We cannot guarantee the program will run as expected in any other environment. 
 
 ## Running The Server
 The server can be run using the `make server` command. By default, the server
