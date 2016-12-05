@@ -525,6 +525,23 @@ let one_argument ab =
     if List.length cd.arguments = 1 then ab 
     else raise_bad_request "Invalid Number of Arguments."
 
+(* [valid_target ab] is [ab] if the specified target in
+ * [ab.cd.arguments] is an alive member of game state [rd.state] 
+ * Raises Action_Error if the target is not alive, the  
+ * target does not exist in game, or the arguments list 
+ * is empty. *)
+let valid_target ab = 
+    match ab.rd.state with 
+        | Lobby _ -> raise_bad_request "Cannot vote in lobby."
+        | Game gs ->
+            try 
+                let target = List.hd_exn ab.cd.arguments in 
+                let is_alive = Game.is_alive target gs in 
+                if is_alive then ab 
+                else raise_bad_request "Cannot vote for dead player."
+            with 
+                _ -> raise_bad_request "Invalid voting target."
+
 (* [can_vote ab] is [ab] if the player specified within [ab] can 
  * vote in the current game_state. Returns Action_Error otherwise *)
 let can_vote ab = 
@@ -587,7 +604,9 @@ let player_action _ req body =
                 | "vote" -> ab |> one_argument 
                                |> in_living 
                                |> can_vote 
+                               |> valid_target
                                |> write_vote 
+
                 | _ -> respond `Bad_request "Invalid Command"
         with 
             | Action_Error response -> response  
