@@ -202,7 +202,7 @@ let voting_to_night st updates =
              "It's night time now! Please vote on an innocent citizen to "^
              "kill tonight :)"))
              ::(Time.now (), (Innocents,
-             "Its night time now - good night :)"))
+             "It's night time now - good night :)"))
              ::s.announcement_history}
 
 let string_of_stage = function
