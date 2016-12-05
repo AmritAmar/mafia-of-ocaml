@@ -62,7 +62,7 @@ let rec is_in n = function
   | h::t -> if h = n then true else is_in n t
 
 let rec get_input ?(commands=[]) () =
-  let input = Pervasives.read_line () in
+  let input = Pervasives.read_line () |> del_special in
   new_prompt ();
   let rec found_in s = function
     | [] -> false
