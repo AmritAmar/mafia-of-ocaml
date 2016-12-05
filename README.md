@@ -13,8 +13,9 @@ default.
 * ANSITerminal
 
 Note, that due to platform-specific issues with ANSITerminal on MacOS and 
-Windows, we **strongly recommend** using the CS 3110 VM when running the program suite. 
-We cannot guarantee the program will run as expected in any other environment. 
+Windows, we **strongly recommend** using the CS 3110 VM when running the program
+suite. We cannot guarantee the program will run as expected in any other
+environment. 
 
 ## Running The Server
 The server can be run using the `make server` command. By default, the server
