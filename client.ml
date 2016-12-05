@@ -32,14 +32,6 @@ let make_uri base_url path room =
   let new_uri = Uri.with_path new_uri path in
   Uri.add_query_params' new_uri [("room_id",room)]
 
-let send_get uri =
-  Client.get uri >>= fun (resp,body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  let new_ivar = Ivar.create () in
-  upon (Body.to_string body)
-       (fun s -> Ivar.fill new_ivar (code,s));
-  Ivar.read new_ivar
-
 let send_post uri ?data () =
   let encoded_data = match data with | None   -> `String ""
                                      | Some d -> `String (encode_cjson d)

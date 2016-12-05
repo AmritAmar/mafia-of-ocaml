@@ -430,17 +430,6 @@ let show_banner () =
   print_object 16 25 [green] screen_height authors;
   ()
 
-let show_state_and_chat () =
-  init ();
-  print_object 1 1 [yellow] screen_height game_state;
-  print_object 3 14 [blue] screen_height chat_log;
-  print_object 8 3 [Bold;yellow] screen_height ["DAY"];
-  print_object 23 3 [Bold;yellow] screen_height ["ALIVE"];
-  print_object 40 3 [Bold;yellow] screen_height ["DEAD"];
-  print_object 40 15 [Bold;white;on_blue] screen_height [" CHAT LOG "];
-  ()
-
-
 let prompt = "> "
 
 let new_prompt () =
@@ -454,7 +443,6 @@ let redraw_long_string s state =
   if lines > 0
   then (erase Screen;
        init ();
-       show_state_and_chat ();
        update_game_state state;
        update_announcements state.announcements;
        set_cursor 1 screen_height;
@@ -464,7 +452,6 @@ let redraw_long_string s state =
 
 (* let () =
   show_banner ();
-  show_state_and_chat();
   scheme 5 "Lobby" [magenta] [] [yellow] [blue] [on_blue];
 
   scheme 4 "Game Over" [blue] [] [white] [magenta] [on_magenta];

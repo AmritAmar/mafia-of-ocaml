@@ -7,23 +7,16 @@ open Cohttp
 open Cohttp_async
 
 (**
- * [make_uri base_url path q_params ()] will turn the given base_url, path,
- * and query parameters into a Uri.t instance. The query parameters are
- * optional.
+ * [make_uri base_url path room] will turn the given base_url, path,
+ * and room into a Uri.t instance. The room will be set as the value of
+ * the "room_id" query parameter.
  *)
 val make_uri : string -> string -> string -> Uri.t
 
 (**
- * [send_get url f] will send a GET request to the URL specified by [url], parse
- * the resulting JSON into a server_json record, and pass it, along with the
- * status code into [f].
- *)
-val send_get : Uri.t -> (int * string) Deferred.t
-
-(**
- * [send_post url data f] will convert [data] into a JSON string and send it to
- * the URL specified by [url] as a POST request. The resulting JSON will be
- * parsed into a server_json record and passed, along with the status code,
- * into [f].
+ * [send_post url data] will convert [data] into a JSON string and send it to
+ * the URL specified by [url] as a POST request. A deferred is returned that
+ * will be determined with the resulting status code and body string when the
+ * client receives a response from the server.
  *)
 val send_post : Uri.t -> ?data:client_json -> unit -> (int * string) Deferred.t

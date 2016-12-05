@@ -1,7 +1,7 @@
 open Client_state
 
 (**
- * Updates the chat log with the given list of strings. The list will be
+ * Updates the chat log with the given list of string tuples. The list will be
  * ordered by how recent the message is (most recent to least recent). Returns
  * the cursor to its position before this function was called.
  *)
@@ -16,8 +16,8 @@ val update_game_state : client_state -> unit
 
 (**
  * Updates the announcements displayed, replacing the old announcements with
- * the given list of strings. Returns the cursor to its position before this
- * function was called.
+ * the given list of string tuples.  Returns the cursor to its position before
+ * this function was called.
  *)
 val update_announcements : (string * string) list -> unit
 
@@ -34,16 +34,6 @@ val new_prompt : unit -> unit
  * called.
  *)
 val show_banner : unit -> unit
-
-(**
- * Initialize user interface.
- *)
-val init : unit -> unit
-
-(**
- * Show state and chat area.
- *)
-val show_state_and_chat : unit -> unit
 
 (**
  * If the user input is longer than one line, erase the screen and redraw
