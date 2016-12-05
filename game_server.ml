@@ -45,7 +45,7 @@ let raise_bad_request msg =
 (* how often to refresh the server state *)
 let beat_rate = Core.Std.sec 5.0
 
-let timeout = Time.Span.of_sec 10.
+let timeout = Time.Span.of_sec 7.5
 
 (* [extract_id req] returns the value of the query 
  * param "room_id" if it is present and well formed.

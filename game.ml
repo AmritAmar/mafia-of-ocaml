@@ -245,7 +245,7 @@ let time_span state =
     | Voting -> Core.Time.Span.of_sec 30.
     | Game_Over -> Core.Time.Span.of_sec 15.
     | Discussion -> Core.Time.Span.minute
-    | Night -> Core.Time.Span.of_sec 30.
+    | Night -> Core.Time.Span.minute
 
 
 let step_game st updates =
