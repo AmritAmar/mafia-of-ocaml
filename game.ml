@@ -191,9 +191,11 @@ let voting_to_night st updates =
             |> List.concat |> handle_exec_vote st 
          in
     {s with stage = Night; 
-             announcement_history = (Time.now (), (All,
-             "Its night time now - go sleep unless you "^
-             "have someone to visit :)"))
+             announcement_history = (Time.now (), (Mafias,
+             "It's night time now! Please vote on an innocent citizen to "^
+             "kill tonight :)"))
+             ::(Time.now (), (Innocents,
+             "Its night time now - good night :)"))
              ::s.announcement_history}
 
 let string_of_stage = function 
