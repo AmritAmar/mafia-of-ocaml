@@ -166,7 +166,7 @@ let night_to_disc st updates =
     {day_count = st.day_count+1; stage = Discussion;
         players = updated_players;
         announcement_history = (Time.now (), (All,
-             "Good Morning! Last night innocent citizen , "^victim^
+             "Good Morning! Last night innocent citizen ,"^victim^
              " was killed in their sleep by the Mafia :( RIP."))
              ::st.announcement_history}
 
