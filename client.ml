@@ -11,6 +11,15 @@ module Fd = Unix.Fd
 let help_string =
   "Available commands: ready, start, chat, vote, mafia-chat, help"
 
+let substr s start =
+  String.sub s start (String.length s - start)
+
+let rec del_special s =
+  if String.length s = 0 then ""
+  else let char_code = String.get s 0 |> Char.code in
+       if char_code < 32 || char_code > 126 then del_special (substr s 1)
+       else String.(make 1 (get s 0)) ^ (del_special (substr s 1))
+
 (* Add announcements to client_state *)
 let add_announcements cs a = cs.announcements <- a @ cs.announcements
 
@@ -103,7 +112,7 @@ let rec get_input_async f =
     | `Ok len ->
       let s = Core.Std.Substring.(create buf ~pos:0 ~len |> to_string) in
       redraw_long_string s client_s;
-      let s = String.trim s in
+      let s = String.trim s |> del_special in
       new_prompt ();
       if s = "" then get_input_async f
       else
