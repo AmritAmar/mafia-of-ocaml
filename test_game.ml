@@ -4,9 +4,12 @@ open Core
 open Data
 
 let id_lst = ["Rachel";"Tyler";"Michael";"Irene"]
-let plr_lst = [("Irene",Innocent);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
-let kill_irene = [("Irene",Dead);("Michael",Innocent);("Tyler",Innocent);("Rachel",Mafia)]
-let kill_tyler = [("Irene",Innocent);("Michael",Innocent);("Tyler",Dead);("Rachel",Mafia)]
+let plr_lst = [("Irene",Innocent);("Michael",Innocent);
+  ("Tyler",Innocent);("Rachel",Mafia)]
+let kill_irene = [("Irene",Dead);("Michael",Innocent);
+  ("Tyler",Innocent);("Rachel",Mafia)]
+let kill_tyler = [("Irene",Innocent);("Michael",Innocent);
+  ("Tyler",Dead);("Rachel",Mafia)]
 
 let init_state = {day_count = 0; stage = Voting; 
         players = plr_lst;  
@@ -14,23 +17,38 @@ let init_state = {day_count = 0; stage = Voting;
 let state2 = {day_count = 1; stage = Discussion; 
         players = kill_tyler;  
         announcement_history = [(Time.now (),
-             (All,"Good Morning! Last night, Tyler was killed in their sleep by the Mafia :( RIP."))]}
-let vote_kill_irene = handle_exec_vote init_state ["Irene";"Irene";"Rachel";"Michael"]
-let vote_kill_irene2 = handle_exec_vote init_state ["Irene";"Rachel";"Michael";"Irene"]
-let vote_kill_irene3 = handle_exec_vote init_state ["Irene";"Michael";"Michael";"Irene"]
-let client_json1 = [{player_id = "Irene";player_action = "vote";arguments = ["Michael"]};
-					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]};
-					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Irene";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]}]
+             (All,"Good Morning! Last night, "^
+              "Tyler was killed in their sleep by the Mafia :( RIP."))]}
+let vote_kill_irene = handle_exec_vote init_state ["Irene";
+  "Irene";"Rachel";"Michael"]
+let vote_kill_irene2 = handle_exec_vote init_state ["Irene";
+  "Rachel";"Michael";"Irene"]
+let vote_kill_irene3 = handle_exec_vote init_state ["Irene";
+  "Michael";"Michael";"Irene"]
+let client_json1 = [{player_id = "Irene";player_action = "vote";
+  arguments = ["Michael"]};
+					{player_id = "Michael";player_action = "vote";
+            arguments = ["Michael"]};
+					{player_id = "Tyler";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Rachel";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Irene";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Rachel";player_action = "vote";
+            arguments = ["Tyler"]}]
 let latest_client_json1 = 
-					[{player_id = "Rachel";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Irene";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Tyler";player_action = "vote";arguments = ["Tyler"]};
-					{player_id = "Michael";player_action = "vote";arguments = ["Michael"]}
+					[{player_id = "Rachel";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Irene";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Tyler";player_action = "vote";
+            arguments = ["Tyler"]};
+					{player_id = "Michael";player_action = "vote";
+            arguments = ["Michael"]}
 					]
-let vote_no_majority = handle_exec_vote init_state ["Irene";"Tyler";"Michael";"Rachel"]
+let vote_no_majority = handle_exec_vote init_state ["Irene";
+  "Tyler";"Michael";"Rachel"]
 
 
 let game_tests = [
