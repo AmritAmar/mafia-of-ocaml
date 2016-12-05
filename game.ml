@@ -117,7 +117,7 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
     in
     {st with players = kill_player voted st.players;
              announcement_history = (now, (Player voted,
-                "You were voted as guilty and was executed. :("))::(now,a)::
+                "You were voted as guilty and were executed. :("))::(now,a)::
                 st.announcement_history}
 (*
  * Checks if the game has ended:
