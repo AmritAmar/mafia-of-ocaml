@@ -408,21 +408,6 @@ let in_living ab =
     if in_living then ab 
     else raise_bad_request "You cannot do that while dead!"
 
-let in_living ab = 
-    let rd = ab.rd in 
-    let cd = ab.cd in
-    let pn = cd.player_id in  
-
-    let in_living = match rd.state with 
-                        | Lobby _ -> true 
-                        | Game gs -> Game.is_alive pn gs 
-
-    in 
-
-    if in_living then ab 
-    else raise (Action_Error (respond `Bad_request "You cannot do that while dead!"))
-
-
 (* [can_chat ab] is [ab] if the player specified in the action bundle's 
  * client_data is able to chat in the supplied room. 
  * Returns Action Error otherwise *)
@@ -527,8 +512,9 @@ let write_game ab =
 
     match rd.state with 
         | Game _ -> raise_bad_request "Game already in progress"
-        | Lobby _ ->
-           transition_beat id (Time.now ()); 
+        | Lobby ls ->
+           let (st', t') = lobby_transition ls (Time.now ()) in 
+           Hashtbl.set rooms ~key:id ~data:{rd with state = st'; transition_at = t'}; 
            eprintf "(%s) entering Game Mode\n" id; 
            respond `OK "Done."
 
