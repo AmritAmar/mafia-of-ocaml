@@ -9,7 +9,7 @@ default.
 
 * async
 * cohttp
-* ANSIterminal
+* ANSITerminal
 
 Note, that due to platform-specific issues with ANSITerminal on MacOS and 
 Windows, we recommend using the CS 3110 VM when running the program suite. 
