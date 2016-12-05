@@ -26,7 +26,7 @@ client-default:
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte
 
-test_game:
+test-game:
 	corebuild -pkgs yojson,ansiterminal,ounit test_game.byte && ./test_game.byte
 
 clean:
