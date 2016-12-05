@@ -47,12 +47,12 @@ let check old_st st =
         {old_st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
-                 ::st.announcement_history}
+                 ::old_st.announcement_history}
     else if (check_victory st Mafia) then 
         {old_st with stage = Game_Over; 
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafias have won."))
-                 ::st.announcement_history} 
+                 ::old_st.announcement_history} 
     else st
 (*
  * Assumes j is list of players, 1/4 of players becomes mafia
