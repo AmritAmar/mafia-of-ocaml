@@ -432,9 +432,9 @@ let update_game_state cs =
     print_list 40 5 [red] 12 20 (remove_duplicates dead) 0;
 
   print_list 23 5 [green] 12 20 (remove_duplicates alive) 0;
+  restore_cursor();
   update_announcements cs.announcements;
   update_chat cs.msgs;
-  restore_cursor();
   ()
 
 
