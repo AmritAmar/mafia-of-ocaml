@@ -99,7 +99,7 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
         {st with announcement_history = (now,a) :: st.announcement_history}
     else
 
-    let voted_player = List.filter (fun (x,_) -> x <> voted) st.players in
+    let voted_player = List.filter (fun (x,_) -> x = voted) st.players in
     let (_,voted_role) = List.hd voted_player in
     let a = if voted_role = Innocent then
                 (All,
@@ -109,6 +109,7 @@ let handle_exec_vote (st:game_state) (players:player_name list)  =
                 (All,
                 voted ^ " was voted guilty and has been executed.\n" ^
                 voted ^ " was a member of the Mafia! Nice work!")
+                
     in
     {st with players = kill_player voted st.players;
              announcement_history = (now, (Player voted,
@@ -165,7 +166,9 @@ let night_to_disc st updates =
 
     {day_count = st.day_count+1; stage = Discussion;
         players = updated_players;
-        announcement_history = (Time.now (), (All,
+        announcement_history = (Time.now (), (Player victim,
+             "Last night, the mafia visited and killed you. RIP"))
+             ::(Time.now (), (All,
              "Good Morning! Last night innocent citizen ,"^victim^
              " was killed in their sleep by the Mafia :( RIP."))
              ::st.announcement_history}
