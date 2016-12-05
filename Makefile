@@ -14,9 +14,6 @@ daemon:
 server:
 	corebuild -pkgs cohttp.async,yojson game_server.byte && ./game_server.byte
 
-test:
-	corebuild -pkgs yojson,ansiterminal,ounit test.byte && ./test.byte
-
 client:
 	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte ${URL}
 
@@ -26,7 +23,7 @@ client-default:
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte
 
-test-game:
+test:
 	corebuild -pkgs yojson,ansiterminal,ounit test_game.byte && ./test_game.byte
 
 clean:
