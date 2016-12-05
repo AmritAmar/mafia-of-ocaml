@@ -176,7 +176,7 @@ let disc_to_voting st updates =
     {st with stage = Voting; 
              announcement_history = (Time.now (), (All,
                 "Discussion time is now over. \n"^
-                "Please vote on a player that could"^
+                "Please vote on a player that could "^
                 "be a member of the Mafia."))
              ::st.announcement_history}
 
@@ -193,7 +193,7 @@ let voting_to_night st updates =
              announcement_history = (Time.now (), (All,
              "Its night time now - go sleep unless you "^
              "have someone to visit :)"))
-             ::st.announcement_history}
+             ::s.announcement_history}
 
 let string_of_stage = function 
     | Night -> "Night"
