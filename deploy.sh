@@ -1,1 +1,0 @@
-ssh -t tyler@mafia.ishikawa.tech "sh ./update.sh" 
