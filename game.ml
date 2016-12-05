@@ -196,12 +196,10 @@ let string_of_stage = function
     | Voting -> "Voting"
     | Game_Over -> "Game Over"
 
-let can_chat state player =
+let can_chat state =
     match state.stage with
-    | Game_Over -> true 
-    | Discussion -> is_alive player state
-    | Night -> is_mafia player state
-    | _ -> false
+     | Night -> false 
+     | Discussion | Voting | Game_Over -> true
 
 let can_vote state player = 
     match state.stage with
