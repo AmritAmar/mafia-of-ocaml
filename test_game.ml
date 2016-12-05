@@ -41,14 +41,9 @@ let game_tests = [
     (kill_player "Irene" plr_lst));
   "handle_exec_vote_no_m" >:: (fun _ -> assert_equal plr_lst
     (vote_no_majority.players));
-  "handle_exec_vote_no_m" >:: (fun _ -> assert_equal "No majority vote has occured. No one is being executed."
-    (vote_no_majority.announcement_history |> List.hd |> snd |> snd));
   "handle_exec_vote_inno1" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene.players));
-  "handle_exec_vote_inno2" >:: (fun _ -> assert_equal 
-  	("You were voted as guilty and was executed. :(")
-  	(vote_kill_irene.announcement_history |> List.hd |> snd |> snd));
-  "handle_exec_vote_inno3" >:: (fun _ -> assert_equal kill_irene
+   "handle_exec_vote_inno3" >:: (fun _ -> assert_equal kill_irene
   	(vote_kill_irene2.players));
 
   "handle_exec_vote_amb" >:: (fun _ -> assert_equal kill_irene
@@ -57,10 +52,7 @@ let game_tests = [
     ((latest_votes [] client_json1)));
   "night_to_disc" >:: (fun _ -> assert_equal (state2.day_count)
     ((night_to_disc init_state client_json1).day_count));
-  "night_to_disc1" >:: (fun _ -> assert_equal (state2.announcement_history |> List.hd |> snd |> snd)
-  	~printer:(fun x -> x)
-    ((night_to_disc init_state client_json1).announcement_history |> List.hd |> snd |> snd));
-
+ 
 ]
 
 let other_tests = []
