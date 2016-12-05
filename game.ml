@@ -41,7 +41,8 @@ let rec get_mafia players mafia = match players with
 let check old_st st =
     let check_victory st role = 
         let check acc (_,x) = (x = Dead || x = role) && acc in 
-        List.fold_left check true st.players in
+        List.fold_left check true st.players 
+    in
 
     if (check_victory st Innocent) then
         {old_st with stage = Game_Over;
