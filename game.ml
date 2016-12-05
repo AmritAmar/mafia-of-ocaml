@@ -38,6 +38,10 @@ let rec get_mafia players mafia = match players with
                     then get_mafia t (x^", "^mafia)
                     else get_mafia t mafia
 
+let shuffle l =
+    List.map (fun c -> (Random.bits (), c)) l |>
+    List.sort compare |> List.map snd
+
 let check old_st st =
     let check_victory st role =
         let check acc (_,x) = (x = Dead || x = role) && acc in
@@ -59,7 +63,7 @@ let check old_st st =
  * Assumes j is list of players, 1/4 of players becomes mafia
  *)
 let init_state lst =
-    let pl =  assign_roles 0 [] lst (List.length lst) in
+    let pl =  assign_roles 0 [] (shuffle lst) (List.length lst) in
     {day_count = 0; stage = Discussion;
         players = pl;
         announcement_history = [(Time.now (),
