@@ -260,6 +260,8 @@ let rec run_daemon () =
 (* ----------------------------------------------------- *)
 (* - Room Creation: *)
 
+(* [create_room conn req body] creates a new game room using the supplied
+ * information, given that it is valid.*)
 let create_room _ req _ = 
     let id = extract_id req in
     match id with 
@@ -298,6 +300,8 @@ let load_room req cd =
             let room_data = Hashtbl.find_exn rooms s in 
             {id = s; rd = room_data; cd = cd}
 
+(* [valid_id ab] is [ab] if the player_id in [ab.cd] is available to be used 
+ * as a username. Raises Action_Error otherwise *)
 let valid_id ab = 
     let player_id = ab.cd.player_id in 
     let players = ab.rd.last_updated in 
@@ -319,11 +323,15 @@ let valid_id ab =
         then raise_bad_request "Chosen name too long."
     else ab 
 
+(* [lobby_join ls cd] is [ls] with the addition of [cd.player_id]. If then
+ * room is empty when the player joins, the player becomes the admin *)
 let lobby_join ls cd = 
     let id = cd.player_id in 
     if (ls.players = []) then {admin = id; players = [(id,true)]}
     else {ls with players = (id,false)::ls.players}
 
+(* [write_join ab] adds the player in [ab.cd] to the selected room.
+ * Raises Action_Error if the game is currently in progress.*)
 let write_join ab = 
     let {id; rd; cd} = ab in 
     match rd.state with 
@@ -344,6 +352,8 @@ let write_join ab =
             
             respond `OK (Time.to_string_fix_proto `Utc time)   
 
+(* [join_room conn req body] adds the player to their chosen room, if their 
+ * configuration is valid. *)
 let join_room _ req body = 
     let join body = 
         try 
@@ -382,6 +392,8 @@ let in_room ab =
     else 
         raise_bad_request (pn ^ " is not in room " ^ id)
 
+(* [in_living ab] is [ab] if [ab.cd.player_id] is alive. 
+ * Raises Action_Error otherwise*)
 let in_living ab = 
     let rd = ab.rd in 
     let cd = ab.cd in
@@ -412,6 +424,8 @@ let can_chat ab =
     else 
         raise_bad_request "Cannot Chat in Current Game Mode."
 
+(* [in_mafia ab] is ab if [ab.cd.player_id] is in the mafia. 
+ * Raises Action_Error otherwise. *)
 let in_mafia ab = 
     let rd = ab.rd in 
     let cd = ab.cd in 
@@ -428,7 +442,6 @@ let in_mafia ab =
 
 (* [write_chat ab] adds the client's chat message into the chat buffer and 
  * returns an 'OK response *)
-
 let write_chat channel {id; rd; cd} = 
     let pn = cd.player_id in 
     let msg = List.fold ~init:"" ~f:(^) cd.arguments in 
@@ -444,7 +457,6 @@ let write_chat channel {id; rd; cd} =
 (* [write_ready ab] toggles the player's ready state given the client_data and 
  * room_data within the supplied action_bundle. 
  * Requires: the room within [ab] is in lobby mode. *)
-
 let write_ready {id; rd; cd} = 
     let update_players acc (n,s) = 
         if n = cd.player_id then (n,true)::acc 
@@ -464,7 +476,6 @@ let write_ready {id; rd; cd} =
 (* [is_admin ab] is [ab] if the player specified within the action_bundle 
  * is an admin in the action_bundle's supplied room, and the room is in 
  * lobby mode. Returns Action_Error otherwise. *)
-
 let is_admin ab = 
     let rd = ab.rd in 
     let cd = ab.cd in 
@@ -479,7 +490,6 @@ let is_admin ab =
 (* [all_ready ab] is [ab] if all the players in the room specified by [ab] are 
  * have readied up, and the room is in lobby mode. 
  * Returns Action_Error otherwise *)
-
 let all_ready ab =
      let rd = ab.rd in 
 
@@ -496,7 +506,6 @@ let all_ready ab =
 (* [write_game ab] moves a game from lobby mode into game mode, 
  * and launches the associated game_state daemons. 
  * Requires: Room is in Lobby Mode *)
-
 let write_game ab = 
     let id = ab.id in 
     let rd = ab.rd in 
@@ -508,16 +517,15 @@ let write_game ab =
            eprintf "(%s) entering Game Mode\n" id; 
            respond `OK "Done."
 
+(* [one_argument ab] is [ab] if the client data in [ab] has only 
+ * one argument. Raises Action_Error otherwise *)
 let one_argument ab = 
     let cd = ab.cd in 
-    match List.length cd.arguments with 
-        | 0 -> raise_bad_request "No arguments specified!"
-        | 1 -> ab
-        | _ -> raise_bad_request "Too many arguments specified!"
+    if List.length cd.arguments = 1 then ab 
+    else raise_bad_request "Invalid Number of Arguments."
 
 (* [can_vote ab] is [ab] if the player specified within [ab] can 
  * vote in the current game_state. Returns Action_Error otherwise *)
-
 let can_vote ab = 
     let rd = ab.rd in 
 
@@ -532,7 +540,6 @@ let can_vote ab =
 (* [write_vote ab] adds the vote specified within the client data of 
  * the action buffer to the room's action_queue. 
  * Requires that the room is in game mode. *)
-
 let write_vote ab = 
     let {id; rd; cd} = ab in 
     match rd.state with 
@@ -546,7 +553,9 @@ let write_vote ab =
                               ~data:{rd with action_buffer = actbuf'};  
 
             respond `OK ("You have voted for: " ^ target)
-    
+
+(* [player_action conn req body] applies the supplied player_action 
+ * to the game state if it is valid *)
 let player_action _ req body = 
     let action body = 
         try 
@@ -590,16 +599,22 @@ let player_action _ req body =
 (* ----------------------------------------------------- *)
 (* - Room Status: *)
 
+(* [extract_days rd] is the current number of days elapsed 
+ * in [rd] *)
 let extract_days rd = 
     match rd.state with 
         | Lobby _ -> -1 (* no days in lobby *) 
         | Game gs -> gs.day_count 
 
+(* [extract_stage rd] is the current stage in [rd] *)
 let extract_stage rd = 
     match rd.state with 
         | Lobby _ -> "Lobby"
         | Game gs -> string_of_stage gs.stage 
 
+(* [extact_players rd] is the list of active players in [rd]. Note, this 
+ * is alive players when the game is in Game mode, and all connected 
+ * players in lobby mode. *)
 let extract_players rd = 
     let l_players acc (pn,_) = pn :: acc in 
     let g_players acc (pn,role) = 
@@ -611,8 +626,9 @@ let extract_players rd =
         | Lobby _ -> List.fold ~init: [] ~f: l_players rd.last_updated
         | Game gs -> List.fold ~init: [] ~f: g_players gs.players 
 
+(* [extract_announce cd rd last] is the list of announcements that the player 
+ * in [cd] is qualified to see from room [rd] that are newer than [last] *)
 let extract_announce cd rd last =     
-    
     let format_target player_id target = 
      match target with 
         | All -> "All"
@@ -641,8 +657,9 @@ let extract_announce cd rd last =
                                ~f:(get_announce gs) 
                                gs.announcement_history
 
+(* [extract_messages rd cd last] is the list of messages that the player in 
+ * [cd] is qualified to see from room [rd] that are newer than [last] *)
 let extract_messages rd cd last = 
-    
     let format_message (channel, pn, msg) = 
         let dir = match channel with
                     | General -> "All"
@@ -668,6 +685,8 @@ let extract_messages rd cd last =
 
     List.fold ~init:[] ~f: get_messages rd.chat_buffer 
 
+(* [refresh_status ab] updates the last_updated entry of [ab.cd.player_id] in 
+ * [ab.rd] with the current time*)
 let refresh_status ab = 
     let {id; rd; cd} = ab in 
     let rec update = function 
@@ -679,6 +698,9 @@ let refresh_status ab =
                       ~data:{rd with last_updated = update rd.last_updated}; 
     ab 
 
+(* [extract_status ab] is the current status of room [ab.rd] as seen 
+ * by [ab.cd.player_id] in the form of server_update.json. 
+ * Raises Action_Error if no timestamp is specifed *)
 let extract_status ab = 
     let rd = ab.rd in 
     let cd = ab.cd in 
@@ -695,11 +717,14 @@ let extract_status ab =
         new_messages = extract_messages rd cd last;
         timestamp = Time.to_string_fix_proto `Utc (Time.now ());
     }
-    
+
+(*[write_status sj] encodes server_update.json as a string, and sends it 
+ * back to the client *)
 let write_status sj = 
     let response = Data.encode_sjson sj in 
     respond `OK response
 
+(* [room_status conn req body] fetches the current room status. *)
 let room_status _ req body = 
     let get_status body = 
         try 

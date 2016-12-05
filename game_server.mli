@@ -48,8 +48,8 @@ val player_action: 'a -> Request.t -> Body.t -> Server.response Deferred.t
 (* [room_status conn req body] fetches the current room status. *)
 val room_status: 'a -> Request.t -> Body.t -> Server.response Deferred.t
 
-(* [handler body conn req] routes all incoming requests 
- * to the appropriate endpoints *)
+(* [handler body conn req] routes all incoming requests to the 
+ * appropriate endpoints *)
 val handler: body:Body.t -> 'a -> Request.t -> Server.response Deferred.t
 
 (* [start_server] starts the server on the given port *)
