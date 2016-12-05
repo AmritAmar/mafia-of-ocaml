@@ -379,10 +379,10 @@ let scheme day game_stage wall p scroll log chat =
     print_object 8 6 [magenta;Bold] 12 [game_stage]);
 
   if String.uppercase_ascii game_stage <> "LOBBY" then
-    print_object 8 3 ([Bold]@scroll) screen_height ["DAY"];
+    (print_object 8 3 ([Bold]@scroll) screen_height ["DAY"];
     print_object 12 3 [blue;Bold] 12 [string_of_int day];
     print_object 23 3 ([Bold]@scroll) screen_height ["ALIVE"];
-    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"];
+    print_object 40 3 ([Bold]@scroll) screen_height ["DEAD"]);
   ()
 
 let update_game_state cs =
