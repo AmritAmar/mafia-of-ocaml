@@ -169,7 +169,7 @@ let night_to_disc st updates =
         announcement_history = (Time.now (), (Player victim,
              "Last night, the mafia visited and killed you. RIP"))
              ::(Time.now (), (All,
-             "Good Morning! Last night innocent citizen ,"^victim^
+             "Good Morning! Last night innocent citizen, "^victim^
              " was killed in their sleep by the Mafia :( RIP."))
              ::st.announcement_history}
 
