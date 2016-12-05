@@ -45,12 +45,12 @@ let check old_st st =
     in
 
     if (check_victory st Innocent) then
-        {old_st with stage = Game_Over;
+        {st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Innocents have won."))
                  ::old_st.announcement_history}
     else if (check_victory st Mafia) then
-        {old_st with stage = Game_Over;
+        {st with stage = Game_Over;
                  announcement_history = (Time.now (), (All,
                  "Congratulations! The Mafia has won."))
                  ::old_st.announcement_history}
@@ -166,7 +166,7 @@ let night_to_disc st updates =
     {day_count = st.day_count+1; stage = Discussion;
         players = updated_players;
         announcement_history = (Time.now (), (All,
-             "Good Morning! Last night, "^victim^
+             "Good Morning! Last night innocent citizen , "^victim^
              " was killed in their sleep by the Mafia :( RIP."))
              ::st.announcement_history}
 
