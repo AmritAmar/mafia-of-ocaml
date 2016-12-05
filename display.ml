@@ -447,18 +447,3 @@ let redraw_long_string s state =
        update_announcements state.announcements;
        set_cursor 1 screen_height;
        erase Eol)
-
-
-
-(* let () =
-  show_banner ();
-  scheme 5 "Lobby" [magenta] [] [yellow] [blue] [on_blue];
-
-  scheme 4 "Game Over" [blue] [] [white] [magenta] [on_magenta];
-  scheme 3 "Discussion" [yellow] [magenta] [cyan] [green] [on_green];
-  scheme 2 "Voting" [green] [blue] [blue] [yellow] [on_yellow];
-  scheme 5 "Night" [white] [] [magenta] [cyan] [on_cyan];
-
-  new_prompt (); *)
-
-
