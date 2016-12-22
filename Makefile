@@ -2,7 +2,6 @@ default:
 	@echo "Usage:"
 	@echo "  make test                      runs tests"
 	@echo "  make client URL=[server URL]   runs client and connects to server"
-	@echo "  make client-default            runs client and connects to remote server"
 	@echo "  make server                    runs server"
 	@echo "  make game                      runs game"
 	@echo "  make test_game                 runs test_game"
@@ -16,9 +15,6 @@ server:
 
 client:
 	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte ${URL}
-
-client-default:
-	corebuild -pkgs yojson,str,async,lwt,cohttp,cohttp.async,ANSITerminal client.byte && ./client.byte http://mafia.ishikawa.tech:3110
 
 game:
 	corebuild -pkgs yojson game.byte && ./game.byte
